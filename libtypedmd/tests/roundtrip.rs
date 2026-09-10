@@ -24,43 +24,11 @@ use libtypedmd::{
     NodeKind, Object, Payload, Placement, Sigil, Slot, Stream, Text,
 };
 
-/// Documents that between them exercise every field in spec §1.
-const CORPUS: &[&str] = &[
-    // Schema-shaped (spec §9).
-    "# [Record] User\n\n- [abc] id\n- [abc] name\n- [#] age\n- [-] team -> teams.id\n- active: Boolean\n",
-    // Widget-shaped, slots in a property value and in heads (spec §9).
-    "# [Screen] Inbox\n\n- [List] source={{ [#] inbox.threads }} item_alias=\"thread\"\n  - [Text] {{ [abc] thread.subject }}\n  - [Text] {{ [abc] thread.sender }}\n",
-    // Mixed kinds at one depth (spec §9).
-    "- [Card] Profile\n  - [abc] title\n  - [Badge] Status\n  - visible: true\n",
-    // Every sigil.
-    "- [abc] s\n- [#] n\n- [1.] l\n- [-] r\n- [31] d\n- [_] b\n- [$] c\n",
-    // Nested property sets.
-    "- [Form] Signup\n  - fields:\n    - [abc] email\n    - [abc] password\n  - submit: post\n",
-    // Headings, prose and a payload.
-    "# Notes\n\nSome prose here.\n\n```rust\nfn main() {}\n```\n",
-    // A payload inside a list item, before the item's children.
-    "- [Module] m\n  ```rust\n  fn x() {}\n  ```\n  - [abc] name\n",
-    // Envelope plus body.
-    "---\nbase: abc123\nfrom: somewhere\n---\n\n# [Record] A\n\n- [abc] id\n",
-    // Two documents restating the same object.
-    "# [Record] A\n\n- [abc] id\n\n---\n\n# [Record] A\n\n- [abc] name\n",
-    // Colons that are not member separators, and a quoted head.
-    "- link: http://example.com/x\n- [Card] \"Notes: draft\" mode=wide\n",
-    // Values that contain the grammar's own terminators, in every position
-    // where the emitter has to quote to keep them from biting.
-    "# \"Notes: draft\"\n\n- [Card] \"a -> b\"\n- [Card] \"a x=y\"\n- \"a: b\": v\n- [abc] \"x -> y\"\n- [List] label=\"two words\"\n",
-    // Leaves, including one whose value contains a colon.
-    "- \"Note: this matters\"\n- plain prose row\n",
-    // Escaped braces (including a CLOSED pair, which is the case that needs
-    // the escape) and an unclosed slot (lenient: literal text).
-    "- head with \\{{ braces: yes\n- [Text] literal \\{{ here\n- [Text] \\{{ x }} still literal\n",
-    // Fallbacks: an unresolvable annotation and an unparseable attribute.
-    "- [abc def] weird\n- [List] source=\n",
-    // Sinks in all three positions.
-    "- name: value -> some.path\n- [-] team -> teams.id\n- [Card] X -> a.b\n",
-    // Deep heading nesting.
-    "# A\n\n## B\n\n### C\n\n- x: 1\n",
-];
+/// The corpus lives in the LIBRARY, not here: `conformance::CORPUS` is the
+/// one set of documents both the round-trip guarantees and the substrate
+/// comparison are measured over, so a second substrate cannot be validated
+/// against a copy that has drifted from this one.
+use libtypedmd::conformance::CORPUS;
 
 /// Guarantee 1: for every graph `G`, `parse(emit(G)) == G` — graph equality
 /// over every field in spec §1, including order, ignoring locations.

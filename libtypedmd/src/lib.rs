@@ -30,6 +30,7 @@
 #![forbid(unsafe_code)]
 
 mod assemble;
+pub mod conformance;
 pub mod emit;
 pub mod error;
 pub mod model;

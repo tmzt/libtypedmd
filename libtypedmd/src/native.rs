@@ -5,7 +5,9 @@
 //! no emphasis, no links, no HTML, no GFM, no setext headings, no indented
 //! code blocks. Inline text is handed on as a byte-exact span.
 
-use crate::substrate::{Block, ListItem, MarkdownParser, Span};
+use crate::substrate::{
+    is_thematic_break, list_marker, merge_adjacent_lists, Block, ListItem, MarkdownParser, Span,
+};
 
 /// The dependency-free substrate. Interchangeable with any other conforming
 /// implementation (spec §6.2).
@@ -14,7 +16,7 @@ pub struct NativeParser;
 
 impl MarkdownParser for NativeParser {
     fn parse_body(&self, body: &str) -> Vec<Block> {
-        let lines: Vec<Line> = body
+        let mut lines: Vec<Line> = body
             .split('\n')
             .enumerate()
             .map(|(idx, raw)| Line {
@@ -23,7 +25,14 @@ impl MarkdownParser for NativeParser {
                 col_offset: 0,
             })
             .collect();
-        parse_blocks(&lines)
+        // A body ending in a newline splits to a final EMPTY element, which is
+        // the terminator and not a line of the document. It has to go: an
+        // UNTERMINATED fence reads to end of input, so the phantom would land
+        // in its payload as a blank line that is not in the source.
+        if lines.len() > 1 && lines.last().map(|l| l.text.is_empty()).unwrap_or(false) {
+            lines.pop();
+        }
+        merge_adjacent_lists(parse_blocks(&lines))
     }
 }
 
@@ -88,31 +97,13 @@ fn parse_blocks(lines: &[Line]) -> Vec<Block> {
             i += 1;
             continue;
         }
-        if marker_at(&line.text).is_some() {
+        if list_marker(&line.text).is_some() {
             out.push(read_list(lines, &mut i));
             continue;
         }
         out.push(read_paragraph(lines, &mut i));
     }
     out
-}
-
-// -- thematic breaks ---------------------------------------------------------
-
-/// `***` / `___` only. The pre-pass owns `---`; anything spelled that way
-/// which survived into a body is treated as a break too, and is dropped —
-/// it carries no node.
-fn is_thematic_break(text: &str) -> bool {
-    let indent = text.len() - text.trim_start_matches(' ').len();
-    if indent > 3 {
-        return false;
-    }
-    let trimmed: String = text.trim().chars().filter(|c| !c.is_whitespace()).collect();
-    if trimmed.len() < 3 {
-        return false;
-    }
-    let first = trimmed.as_bytes()[0];
-    matches!(first, b'*' | b'_' | b'-') && trimmed.bytes().all(|b| b == first)
 }
 
 // -- headings ----------------------------------------------------------------
@@ -210,54 +201,31 @@ fn join_body(lines: &[String]) -> String {
 
 // -- lists -------------------------------------------------------------------
 
-/// The marker on this line, if any: `(ordered, byte offset of content)`.
-fn marker_at(text: &str) -> Option<(bool, usize)> {
+/// A `>` line. It carries no node — a quote is outside the five block shapes
+/// and its lines read as text (spec §6.2) — but it is the one out-of-scope
+/// construct that ALWAYS interrupts, so a list item's lazy continuation ends
+/// at it. A substrate that let the item swallow it would part company with
+/// every CommonMark reader on the second line of a quote.
+fn opens_quote(text: &str) -> bool {
     let indent = text.len() - text.trim_start_matches(' ').len();
-    if indent > 3 && text.len() == indent {
-        return None;
-    }
-    let rest = &text[indent..];
-    let bytes = rest.as_bytes();
-    let (ordered, marker_len) = if matches!(bytes.first(), Some(b'-' | b'*' | b'+')) {
-        (false, 1)
-    } else {
-        let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
-        if digits == 0 || digits > 9 {
-            return None;
-        }
-        match bytes.get(digits) {
-            Some(b'.' | b')') => (true, digits + 1),
-            _ => return None,
-        }
-    };
-    match bytes.get(marker_len) {
-        None => Some((ordered, indent + marker_len + 1)),
-        Some(b' ') => {
-            let after = &rest[marker_len..];
-            let spaces = after.len() - after.trim_start_matches(' ').len();
-            // A run of 5+ spaces is not part of the marker (CommonMark).
-            let spaces = if spaces > 4 { 1 } else { spaces };
-            Some((ordered, indent + marker_len + spaces))
-        }
-        _ => None,
-    }
+    indent <= 3 && text[indent..].starts_with('>')
 }
 
 pub(crate) fn starts_block(text: &str) -> bool {
     heading_at(text).is_some()
         || fence_at(text).is_some()
         || is_thematic_break(text)
-        || marker_at(text).is_some()
+        || list_marker(text).is_some()
 }
 
 fn read_list(lines: &[Line], i: &mut usize) -> Block {
     let list_indent = lines[*i].indent();
-    let (ordered, _) = marker_at(&lines[*i].text).expect("caller checked");
+    let (ordered, _) = list_marker(&lines[*i].text).expect("caller checked");
     let mut items = Vec::new();
 
     loop {
         let line = &lines[*i];
-        let (_, content) = marker_at(&line.text).expect("checked at loop end");
+        let (_, content) = list_marker(&line.text).expect("checked at loop end");
         let source = line.span_from(content);
 
         let mut item_lines: Vec<Line> = Vec::new();
@@ -276,8 +244,8 @@ fn read_list(lines: &[Line], i: &mut usize) -> Block {
                 item_lines.push(candidate.dedent(content));
                 j += 1;
             } else if pending_blanks.is_empty()
-                && !item_lines.is_empty()
                 && !starts_block(&candidate.text)
+                && !opens_quote(&candidate.text)
             {
                 // Lazy continuation of the item's paragraph.
                 item_lines.push(candidate.dedent(ind));
@@ -293,7 +261,7 @@ fn read_list(lines: &[Line], i: &mut usize) -> Block {
         let continues = *i < lines.len()
             && !lines[*i].is_blank()
             && lines[*i].indent() == list_indent
-            && marker_at(&lines[*i].text).map(|(o, _)| o) == Some(ordered);
+            && list_marker(&lines[*i].text).map(|(o, _)| o) == Some(ordered);
         if !continues {
             break;
         }

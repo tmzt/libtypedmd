@@ -6,7 +6,7 @@
 # workspace.
 [workspace]
 resolver = "3"
-members = ["libtypedmd"]
+members = ["libtypedmd", "libtypedmd_pulldown"]
 
 [workspace.package]
 edition = "2021"
