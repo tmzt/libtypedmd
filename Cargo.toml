@@ -1,0 +1,13 @@
+# libtypedmd workspace.
+#
+# Deliberately its own workspace root: the core crate is built and tested
+# STANDALONE (`cargo test` from this directory), which is the property that
+# keeps it liftable into another tree. It is not a member of the Highbay root
+# workspace.
+[workspace]
+resolver = "3"
+members = ["libtypedmd"]
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"

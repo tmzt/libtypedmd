@@ -1,0 +1,16 @@
+[package]
+name = "libtypedmd"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "A generic object-graph format whose serialization is Markdown."
+
+# ZERO DEPENDENCIES. This is a hard property of the core crate, not an
+# accident of the current feature set: the graph, the pre-pass, the row
+# grammar and the emitter are all std-only, so the crate lifts into any tree
+# without dragging a resolver graph behind it. A substrate adapter (e.g.
+# `libtypedmd_pulldown`) is a SIBLING crate behind the `MarkdownParser` trait;
+# it never becomes a dependency of this one.
+[dependencies]
+
+[dev-dependencies]
