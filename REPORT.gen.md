@@ -365,3 +365,103 @@ from: somewhere
 - [_] done
 - [x] not a sigil
 ```
+
+## 18. before
+
+````markdown
+- before
+- |
+  a: b
+  x=y
+  - item
+  # heading
+  > quote
+  ```rust
+  fn f() {}
+  ```
+  {{ slot }}
+  one
+
+  two
+- after: 1
+````
+
+## 18. after
+
+````markdown
+- before
+- |
+  a: b
+  x=y
+  - item
+  # heading
+  > quote
+  ```rust
+  fn f() {}
+  ```
+  {{ slot }}
+  one
+
+  two
+- after: 1
+````
+
+## 19. before
+
+```markdown
+- say: |
+  hello: world
+  again
+- [abc] shout: |
+  LOUD -> x
+- empty: |
+- |
+- | text
+- "|"
+```
+
+## 19. after
+
+```markdown
+- say: |
+  hello: world
+  again
+- [abc] shout: |
+  LOUD -> x
+- empty: |
+
+- |
+
+- | text
+- "|"
+```
+
+## 20. before
+
+```markdown
+# [Card] A
+
+- [Card] B
+  - |
+    a: b
+    - c
+    ***
+
+    d
+  - after
+```
+
+## 20. after
+
+```markdown
+# [Card] A
+
+- [Card] B
+  - |
+    a: b
+    - c
+    ***
+
+    d
+  - after
+```
