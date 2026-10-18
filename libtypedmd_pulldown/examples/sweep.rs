@@ -79,15 +79,32 @@ fn main() {
             graph_diff.push(body.clone());
         }
     }
-    println!("bodies: {}  block-diffs: {}  graph-diffs: {}", all.len(), blocks_diff, graph_diff.len());
+    println!(
+        "bodies: {}  block-diffs: {}  graph-diffs: {}",
+        all.len(),
+        blocks_diff,
+        graph_diff.len()
+    );
     let mut short: Vec<&String> = graph_diff.iter().collect();
-    short.sort_by_key(|b| (b.lines().filter(|l| !l.trim().is_empty()).count(), b.len(), b.to_string()));
+    short.sort_by_key(|b| {
+        (
+            b.lines().filter(|l| !l.trim().is_empty()).count(),
+            b.len(),
+            b.to_string(),
+        )
+    });
     let mut shown = 0;
     for body in &short {
         if std::env::args().any(|a| a == "--in-grammar")
-            && (body.contains('<') || body.contains('\t')
-                || body.lines().any(|l| l.starts_with("2)"))) { continue; }
-        if shown >= 30 { break; }
+            && (body.contains('<')
+                || body.contains('\t')
+                || body.lines().any(|l| l.starts_with("2)")))
+        {
+            continue;
+        }
+        if shown >= 30 {
+            break;
+        }
         shown += 1;
         println!("\n== {body:?}");
         if NativeParser.parse_body(body) == PulldownParser.parse_body(body) {

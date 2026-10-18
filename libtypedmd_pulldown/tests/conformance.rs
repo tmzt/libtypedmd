@@ -8,7 +8,9 @@
 //! substrates; this file puts a real one through it.
 
 use libtypedmd::conformance::{self, DivergenceKind};
-use libtypedmd::{emit, parse_with_substrate, Block, MarkdownParser, NativeParser, ParseOptions, Sigil};
+use libtypedmd::{
+    emit, parse_with_substrate, Block, MarkdownParser, NativeParser, ParseOptions, Sigil,
+};
 use libtypedmd_pulldown::PulldownParser;
 
 fn graph(input: &str) -> libtypedmd::Stream {
@@ -50,7 +52,10 @@ fn spans_are_byte_exact_slices_of_the_body() {
     assert_eq!(source.text, "[Text] a *b* `c` [d](e) &amp; \\*f\\*");
     assert_eq!(source.line, 1);
     assert_eq!(source.column, 3, "1-based byte column, past `- `");
-    assert!(body.contains(&source.text), "the span is a substring of the body it came from");
+    assert!(
+        body.contains(&source.text),
+        "the span is a substring of the body it came from"
+    );
 }
 
 /// **A sigil is never eaten as a CommonMark link.** With `[Card]: /somewhere`
@@ -65,10 +70,34 @@ fn a_link_reference_definition_cannot_retype_a_row() {
     // The definition line is not a node's annotation and is not lost either:
     // pulldown reports no events at all for it, so it comes back off the
     // source as ordinary text.
-    assert_eq!(nodes[0].as_leaf().expect("the definition survives as prose").text, "[Card]: /somewhere");
-    assert_eq!(nodes[1].as_object().expect("still an object").tag.as_deref(), Some("Card"));
-    assert_eq!(nodes[2].as_member().expect("still a member").sigil, Some(Sigil::String));
-    assert_eq!(stream, parse_with_substrate("[Card]: /somewhere\n\n- [Card] Profile\n- [abc] id\n", &ParseOptions::lenient(), &NativeParser).unwrap());
+    assert_eq!(
+        nodes[0]
+            .as_leaf()
+            .expect("the definition survives as prose")
+            .text,
+        "[Card]: /somewhere"
+    );
+    assert_eq!(
+        nodes[1]
+            .as_object()
+            .expect("still an object")
+            .tag
+            .as_deref(),
+        Some("Card")
+    );
+    assert_eq!(
+        nodes[2].as_member().expect("still a member").sigil,
+        Some(Sigil::String)
+    );
+    assert_eq!(
+        stream,
+        parse_with_substrate(
+            "[Card]: /somewhere\n\n- [Card] Profile\n- [abc] id\n",
+            &ParseOptions::lenient(),
+            &NativeParser
+        )
+        .unwrap()
+    );
 }
 
 /// The option set is EMPTY, pinned by value. Source-slicing makes this
@@ -92,11 +121,20 @@ fn gfm_is_off() {
     let stream = graph("| a | b |\n| --- | --- |\n\n- [_] done\n- [x] not a sigil\n");
     let nodes = &stream.documents[0].nodes;
 
-    assert_eq!(nodes[0].as_leaf().expect("a table is prose").text, "| a | b |\n| --- | --- |");
-    assert_eq!(nodes[1].as_member().expect("boolean").sigil, Some(Sigil::Boolean));
+    assert_eq!(
+        nodes[0].as_leaf().expect("a table is prose").text,
+        "| a | b |\n| --- | --- |"
+    );
+    assert_eq!(
+        nodes[1].as_member().expect("boolean").sigil,
+        Some(Sigil::Boolean)
+    );
     assert_eq!(nodes[1].as_member().unwrap().name, "done");
     // `[x]` is not in the core table, so it is a consumer TAG, not a checkbox.
-    assert_eq!(nodes[2].as_object().expect("a tag").tag.as_deref(), Some("x"));
+    assert_eq!(
+        nodes[2].as_object().expect("a tag").tag.as_deref(),
+        Some("x")
+    );
     assert_eq!(nodes[2].as_object().unwrap().head.render(), "not a sigil");
 }
 
@@ -132,8 +170,15 @@ fn emission_round_trips_through_the_pulldown_substrate() {
     for (index, source) in conformance::CORPUS.iter().enumerate() {
         let once = graph(source);
         let again = graph(&emit(&once));
-        assert_eq!(again, once, "corpus[{index}] did not survive parse -> emit -> parse");
-        assert_eq!(emit(&graph(&emit(&once))), emit(&once), "corpus[{index}] is not a fixed point");
+        assert_eq!(
+            again, once,
+            "corpus[{index}] did not survive parse -> emit -> parse"
+        );
+        assert_eq!(
+            emit(&graph(&emit(&once))),
+            emit(&once),
+            "corpus[{index}] is not a fixed point"
+        );
     }
 }
 
@@ -161,9 +206,18 @@ fn a_block_quote_is_verbatim_text_under_both_substrates() {
     }
 
     let stream = graph("> quoted text\n");
-    let leaf = stream.documents[0].nodes[0].as_leaf().expect("a quote is a leaf");
-    assert_eq!(leaf.text, "> quoted text", "the marker is part of the value");
-    assert_eq!(emit(&stream), "> quoted text\n", "and it comes back unchanged");
+    let leaf = stream.documents[0].nodes[0]
+        .as_leaf()
+        .expect("a quote is a leaf");
+    assert_eq!(
+        leaf.text, "> quoted text",
+        "the marker is part of the value"
+    );
+    assert_eq!(
+        emit(&stream),
+        "> quoted text\n",
+        "and it comes back unchanged"
+    );
 }
 
 /// The same for the other constructs the trait has no variant for.
@@ -205,22 +259,38 @@ fn the_known_boundary_is_exactly_these_three() {
     // 1. An HTML block runs to a blank line, swallowing lines the native
     //    reader takes as blocks of their own.
     let body = "<div>\n## Heading\n";
-    assert_ne!(PulldownParser.parse_body(body), NativeParser.parse_body(body));
-    assert!(matches!(NativeParser.parse_body(body)[1], Block::Heading { .. }));
+    assert_ne!(
+        PulldownParser.parse_body(body),
+        NativeParser.parse_body(body)
+    );
+    assert!(matches!(
+        NativeParser.parse_body(body)[1],
+        Block::Heading { .. }
+    ));
     assert_eq!(PulldownParser.parse_body(body).len(), 1, "one run of text");
 
     // 2. An ordered list whose first number is not 1 cannot interrupt a
     //    paragraph in CommonMark; the native reader starts a list at any
     //    marker.
     let body = "text\n2) two\n";
-    assert_ne!(PulldownParser.parse_body(body), NativeParser.parse_body(body));
-    assert_eq!(NativeParser.parse_body(body).len(), 2, "paragraph then list");
+    assert_ne!(
+        PulldownParser.parse_body(body),
+        NativeParser.parse_body(body)
+    );
+    assert_eq!(
+        NativeParser.parse_body(body).len(),
+        2,
+        "paragraph then list"
+    );
     assert_eq!(PulldownParser.parse_body(body).len(), 1, "one run of text");
 
     // 3. A TAB is four columns of indentation to CommonMark and no
     //    indentation at all to the native reader, which counts spaces.
     let body = "- a\n\t- tabbed\n";
-    assert_ne!(PulldownParser.parse_body(body), NativeParser.parse_body(body));
+    assert_ne!(
+        PulldownParser.parse_body(body),
+        NativeParser.parse_body(body)
+    );
 
     // And nothing is LOST in any of them: the content of every source line
     // reaches the block stream under both readers, only in a different shape.
@@ -235,7 +305,10 @@ fn the_known_boundary_is_exactly_these_three() {
     match &PulldownParser.parse_body(body)[..] {
         [Block::Paragraph { lines }] => {
             assert_eq!(lines[0].text, "<div>");
-            assert_eq!(lines[1].text, "## Heading", "the whole line, markers and all");
+            assert_eq!(
+                lines[1].text, "## Heading",
+                "the whole line, markers and all"
+            );
         }
         other => panic!("{other:?}"),
     }
@@ -305,7 +378,10 @@ fn a_generated_sweep_finds_no_other_divergence() {
         }
     }
 
-    assert!(checked > 7000, "the sweep only ran {checked} bodies; it is not sweeping");
+    assert!(
+        checked > 7000,
+        "the sweep only ran {checked} bodies; it is not sweeping"
+    );
     assert!(
         divergent.is_empty(),
         "{} of {checked} bodies diverged, first five:\n{}",
@@ -332,7 +408,11 @@ fn the_sweep_admits_bodies_that_can_diverge() {
     assert!(!body.contains('<') && !body.contains('\t'));
     let mut blocks = PulldownParser.parse_body(body);
     blocks.pop();
-    assert_ne!(blocks, NativeParser.parse_body(body), "a dropped block must show up");
+    assert_ne!(
+        blocks,
+        NativeParser.parse_body(body),
+        "a dropped block must show up"
+    );
 }
 
 // -- the generated report ----------------------------------------------------
@@ -352,7 +432,11 @@ fn writes_the_generated_report() {
 
 #[test]
 fn the_report_is_deterministic() {
-    assert_eq!(render_report(), render_report(), "the report has no clock and no RNG");
+    assert_eq!(
+        render_report(),
+        render_report(),
+        "the report has no clock and no RNG"
+    );
 }
 
 fn report_path() -> std::path::PathBuf {
@@ -384,7 +468,10 @@ fn render_report() -> String {
     out.push_str("Where the two substrates disagree, both are shown.\n");
 
     for (index, source) in conformance::CORPUS.iter().enumerate() {
-        let native = emit(&parse_with_substrate(source, &ParseOptions::lenient(), &NativeParser).expect("lenient"));
+        let native = emit(
+            &parse_with_substrate(source, &ParseOptions::lenient(), &NativeParser)
+                .expect("lenient"),
+        );
         let pulldown = emit(&graph(source));
 
         out.push_str(&format!("\n## {index}. before\n\n"));
@@ -421,9 +508,13 @@ fn block(content: &str) -> String {
 #[test]
 fn the_report_shows_both_substrates_when_they_differ() {
     let source = "<div>\n## Heading\n";
-    let native = emit(&parse_with_substrate(source, &ParseOptions::lenient(), &NativeParser).unwrap());
+    let native =
+        emit(&parse_with_substrate(source, &ParseOptions::lenient(), &NativeParser).unwrap());
     let pulldown = emit(&graph(source));
-    assert_ne!(native, pulldown, "this is the boundary case; if it agrees, the pin below is vacuous");
+    assert_ne!(
+        native, pulldown,
+        "this is the boundary case; if it agrees, the pin below is vacuous"
+    );
 
     // Same shape as `render_report` uses, on a document that does diverge.
     assert!(block(&native) != block(&pulldown));
@@ -441,7 +532,10 @@ fn report_fences_survive_their_own_content() {
         .find(|document| document.contains("```"))
         .expect("the corpus has a payload with a fence");
     let rendered = block(with_fence);
-    assert!(rendered.starts_with("````markdown\n"), "a longer fence:\n{rendered}");
+    assert!(
+        rendered.starts_with("````markdown\n"),
+        "a longer fence:\n{rendered}"
+    );
     assert!(rendered.ends_with("````\n"));
     // The inner fence is intact, not escaped or shortened.
     assert!(rendered.contains("```rust\n"));
@@ -459,8 +553,10 @@ fn both_divergence_kinds_are_reachable() {
             blocks
         }
     }
-    let kinds: Vec<DivergenceKind> =
-        conformance::divergences(&DropsLast).into_iter().map(|d| d.kind).collect();
+    let kinds: Vec<DivergenceKind> = conformance::divergences(&DropsLast)
+        .into_iter()
+        .map(|d| d.kind)
+        .collect();
     assert!(kinds.contains(&DivergenceKind::Blocks));
     assert!(kinds.contains(&DivergenceKind::Graph));
 }

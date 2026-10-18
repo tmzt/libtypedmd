@@ -131,14 +131,22 @@ fn block_kind(tag: &Tag<'_>) -> Option<Kind> {
 /// Build the block tree. Inline `Start`/`End` pairs are skipped in step, which
 /// is sound because an inline element can never contain a block.
 fn read_events(body: &str) -> Vec<Raw> {
-    let mut stack: Vec<Raw> = vec![Raw { kind: Kind::Opaque, range: 0..body.len(), children: Vec::new() }];
+    let mut stack: Vec<Raw> = vec![Raw {
+        kind: Kind::Opaque,
+        range: 0..body.len(),
+        children: Vec::new(),
+    }];
     let mut inline_depth = 0usize;
 
     for (event, range) in Parser::new_ext(body, PulldownParser::OPTIONS).into_offset_iter() {
         match event {
             Event::Start(tag) => match block_kind(&tag) {
                 Some(kind) if inline_depth == 0 => {
-                    stack.push(Raw { kind, range, children: Vec::new() });
+                    stack.push(Raw {
+                        kind,
+                        range,
+                        children: Vec::new(),
+                    });
                 }
                 _ => inline_depth += 1,
             },
@@ -147,15 +155,19 @@ fn read_events(body: &str) -> Vec<Raw> {
                     inline_depth -= 1;
                 } else if stack.len() > 1 {
                     let done = stack.pop().expect("checked");
-                    stack.last_mut().expect("the root never pops").children.push(done);
+                    stack
+                        .last_mut()
+                        .expect("the root never pops")
+                        .children
+                        .push(done);
                 }
             }
             Event::Rule => {
-                stack
-                    .last_mut()
-                    .expect("root")
-                    .children
-                    .push(Raw { kind: Kind::Rule, range, children: Vec::new() });
+                stack.last_mut().expect("root").children.push(Raw {
+                    kind: Kind::Rule,
+                    range,
+                    children: Vec::new(),
+                });
             }
             // Text, Code, Html, SoftBreak, HardBreak, FootnoteReference,
             // TaskListMarker: inline content. This adapter reads the source,
@@ -217,7 +229,9 @@ impl<'a> Lines<'a> {
     /// parent's row and report it twice.
     fn start_line_of(&self, offset: usize) -> usize {
         let line = self.line_of(offset);
-        if line < self.count() && offset.saturating_sub(self.starts[line - 1]) >= self.text(line).len() {
+        if line < self.count()
+            && offset.saturating_sub(self.starts[line - 1]) >= self.text(line).len()
+        {
             line + 1
         } else {
             line
@@ -373,7 +387,10 @@ impl Reader<'_> {
         match raw.kind {
             Kind::Rule => vec![Block::ThematicBreak],
             Kind::Heading(level) => {
-                vec![Block::Heading { level, source: self.heading_span(first, level) }]
+                vec![Block::Heading {
+                    level,
+                    source: self.heading_span(first, level),
+                }]
             }
             Kind::Fence => vec![self.fence(first, last)],
             Kind::List(ordered) => {
@@ -382,7 +399,10 @@ impl Reader<'_> {
             }
             // An item outside a list cannot happen; treat it as one anyway
             // rather than dropping source.
-            Kind::Item => vec![Block::List { ordered: false, items: vec![self.item(raw)] }],
+            Kind::Item => vec![Block::List {
+                ordered: false,
+                items: vec![self.item(raw)],
+            }],
             Kind::Paragraph | Kind::Opaque => {
                 let mut out = Vec::new();
                 let mut run = Vec::new();
@@ -399,7 +419,11 @@ impl Reader<'_> {
         let text = self.lines.text(line);
         let indent = text.len() - text.trim_start_matches(' ').len();
         let rest = &text[indent..];
-        let hashes = rest.bytes().take_while(|b| *b == b'#').count().min(level as usize);
+        let hashes = rest
+            .bytes()
+            .take_while(|b| *b == b'#')
+            .count()
+            .min(level as usize);
         let after = &rest[hashes..];
         let spaces = after.len() - after.trim_start_matches(' ').len();
         let from = indent + hashes + spaces;
@@ -444,7 +468,11 @@ impl Reader<'_> {
             joined.push('\n');
             joined
         };
-        Block::CodeFence { info, body, line: first }
+        Block::CodeFence {
+            info,
+            body,
+            line: first,
+        }
     }
 
     fn item(&self, raw: &Raw) -> ListItem {
@@ -461,6 +489,8 @@ impl Reader<'_> {
 
 fn flush(out: &mut Vec<Block>, pending: &mut Vec<Span>) {
     if !pending.is_empty() {
-        out.push(Block::Paragraph { lines: std::mem::take(pending) });
+        out.push(Block::Paragraph {
+            lines: std::mem::take(pending),
+        });
     }
 }
