@@ -9,6 +9,7 @@
 use crate::error::ParseError;
 use crate::model::{
     Carrier, ClaimShape, Document, Envelope, Leaf, LeafForm, Location, Node, NodeKind, Payload,
+    Text,
 };
 use crate::prepass::{envelope_pair, RawDocument};
 use crate::row::scan_row;
@@ -19,6 +20,8 @@ pub(crate) struct Assembler<'a> {
     aliases: &'a AliasTable,
     doc_index: usize,
     base_line: usize,
+    /// The current body's lines, `\r` removed, for slicing literal blocks.
+    body_lines: Vec<String>,
     pub(crate) errors: Vec<ParseError>,
 }
 
@@ -35,6 +38,7 @@ impl<'a> Assembler<'a> {
             aliases,
             doc_index,
             base_line: 1,
+            body_lines: Vec::new(),
             errors: Vec::new(),
         }
     }
@@ -46,6 +50,11 @@ impl<'a> Assembler<'a> {
     ) -> Document {
         let envelope = self.envelope(raw);
         self.base_line = raw.body_line;
+        self.body_lines = raw
+            .body
+            .split('\n')
+            .map(|l| l.strip_suffix('\r').unwrap_or(l).to_string())
+            .collect();
         let blocks = substrate.parse_body(&raw.body);
         let (built, payloads) = self.blocks(&blocks);
         let at = Location {
@@ -187,11 +196,76 @@ impl<'a> Assembler<'a> {
     fn item(&mut self, item: &ListItem) -> Built {
         let at = self.location(&item.source);
         let mut built = self.row(&item.source.text, false, at);
+        if let Some(text) = self.literal_block(item, &built.node) {
+            match &mut built.node.kind {
+                NodeKind::Leaf(l) => {
+                    l.text = text;
+                    l.form = LeafForm::Literal;
+                }
+                NodeKind::Member(m) => m.rhs = Some(Text::literal(text)),
+                _ => {}
+            }
+            // Nothing inside a block is parsed or nested (spec §3 rule 6.3).
+            return built;
+        }
         let (children, payloads) = self.blocks(&item.blocks);
         built.node.payloads.extend(payloads);
         let inline = std::mem::take(&mut built.node.nodes);
         built.node.nodes = self.seal(inline, children, at);
         built
+    }
+
+    /// The text of a literal block (spec §3 rule 6), if this item is one:
+    /// a row that is exactly `|`, or a member row whose RHS is exactly `|`.
+    ///
+    /// The block is sliced from the body's own lines. Its extent is every
+    /// following line that is blank (and followed by more of the block) or
+    /// indented to the item's content column, plus any lazy continuation
+    /// lines the substrate attached to the item.
+    fn literal_block(&self, item: &ListItem, node: &Node) -> Option<String> {
+        let opens = match &node.kind {
+            NodeKind::Leaf(_) => item.source.text.trim() == "|",
+            NodeKind::Member(m) => {
+                m.sink.is_none()
+                    && m.rhs.as_ref().and_then(|t| t.as_literal()).map(str::trim) == Some("|")
+            }
+            _ => false,
+        };
+        if !opens {
+            return None;
+        }
+        let row = item.source.line;
+        let content = item.source.column.saturating_sub(1);
+        let indent = |l: &str| l.len() - l.trim_start_matches(' ').len();
+        let blank = |l: &str| l.trim().is_empty();
+
+        let mut end = row; // 1-based line of the last line in the block
+        let mut j = row; // 0-based index of the line after the row
+        while j < self.body_lines.len() {
+            let l = &self.body_lines[j];
+            if !blank(l) && indent(l) >= content {
+                end = j + 1;
+            }
+            if !blank(l) && indent(l) < content {
+                break;
+            }
+            j += 1;
+        }
+        end = end.max(last_line(&item.blocks));
+        let end = end.min(self.body_lines.len());
+
+        let lines = &self.body_lines[row.min(end)..end];
+        let common = lines
+            .iter()
+            .filter(|l| !blank(l))
+            .map(|l| indent(l))
+            .min()
+            .unwrap_or(0);
+        let text: Vec<&str> = lines
+            .iter()
+            .map(|l| if blank(l) { "" } else { l[common..].trim_end() })
+            .collect();
+        Some(text.join("\n"))
     }
 
     fn row(&mut self, text: &str, is_heading: bool, at: Location) -> Built {
@@ -253,6 +327,26 @@ impl<'a> Assembler<'a> {
             .map(|(b, _)| b.node)
             .collect()
     }
+}
+
+/// The last body line that the blocks of an item are known to reach. Used
+/// only to include lazy continuation lines in a literal block.
+fn last_line(blocks: &[Block]) -> usize {
+    blocks
+        .iter()
+        .map(|b| match b {
+            Block::Heading { source, .. } => source.line,
+            Block::List { items, .. } => items
+                .iter()
+                .map(|i| i.source.line.max(last_line(&i.blocks)))
+                .max()
+                .unwrap_or(0),
+            Block::Paragraph { lines } => lines.last().map(|s| s.line).unwrap_or(0),
+            Block::CodeFence { line, .. } => *line,
+            Block::ThematicBreak => 0,
+        })
+        .max()
+        .unwrap_or(0)
 }
 
 /// Undo the emitter's line escape: a `\` before something that would

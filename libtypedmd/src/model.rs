@@ -371,6 +371,9 @@ pub enum LeafForm {
     #[default]
     Row,
     Paragraph,
+    /// A literal block, `- |` and its indented lines (spec §3 rule 6). The
+    /// text is the block, taken verbatim.
+    Literal,
 }
 
 /// What an unresolved row CLAIMED to be (spec §7). The claim, not the text,
