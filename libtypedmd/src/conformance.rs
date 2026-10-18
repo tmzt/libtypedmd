@@ -71,6 +71,14 @@ pub const CORPUS: &[&str] = &[
     // Table pipes and a `[x]` row: both are GFM, and GFM is OFF, so both are
     // ordinary text and `[_]` keeps the boolean sigil to itself (spec §2).
     "| a | b |\n| --- | --- |\n\n- [_] done\n- [x] not a sigil\n",
+    // Literal blocks: everything the row grammar and Markdown would otherwise
+    // read, taken verbatim (spec §3 rule 6); a block between ordinary rows.
+    "- before\n- |\n  a: b\n  x=y\n  - item\n  # heading\n  > quote\n  ```rust\n  fn f() {}\n  ```\n  {{ slot }}\n  one\n\n  two\n- after: 1\n",
+    // Member blocks, with and without a sigil, empty blocks, `- | text`
+    // read as a row, and a quoted bar.
+    "- say: |\n  hello: world\n  again\n- [abc] shout: |\n  LOUD -> x\n- empty: |\n- |\n- | text\n- \"|\"\n",
+    // A block nested two list levels deep, with a heading above.
+    "# [Card] A\n\n- [Card] B\n  - |\n    a: b\n    - c\n    ***\n\n    d\n  - after\n",
 ];
 
 /// Where two substrates disagreed.

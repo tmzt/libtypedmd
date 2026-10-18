@@ -378,17 +378,14 @@ fn the_graph_has_no_source_field() {
 }
 
 /// A row leaf whose value contains a newline has no row spelling, so it
-/// demotes to a paragraph. The `form` flag is lost — presentation — but the
-/// VALUE survives, which a broken row would not.
+/// emits as a literal block (spec §8 rule 8). The `form` flag changes — it is
+/// presentation — but the VALUE survives, which a broken row would not.
 #[test]
-fn a_multiline_leaf_demotes_to_a_paragraph() {
+fn a_multiline_row_leaf_emits_as_a_literal_block() {
     let doc = Document::with_nodes(vec![Node::leaf("a\nb")]);
     let out = emit_document(&doc);
-    assert_eq!(out, "a\nb\n", "not a row:\n{out}");
+    assert_eq!(out, "- |\n  a\n  b\n", "a block, not a row:\n{out}");
     let back = parse(&out).documents.remove(0).nodes.remove(0);
     assert_eq!(back.as_leaf().unwrap().text, "a\nb", "the value survived");
-    assert_eq!(
-        back.as_leaf().unwrap().form,
-        libtypedmd::LeafForm::Paragraph
-    );
+    assert_eq!(back.as_leaf().unwrap().form, libtypedmd::LeafForm::Literal);
 }

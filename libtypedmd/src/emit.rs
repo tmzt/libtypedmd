@@ -119,6 +119,15 @@ impl Emitter {
         let indent = "  ".repeat(depth);
         let inline = inline_count(node);
         self.line(format!("{indent}- {}", row_body(node, inline)));
+        if let Some(block) = block_text(node) {
+            // A literal block (spec §8 rule 8). Nothing nests in a block, so
+            // the node's children and payloads have no spelling here.
+            let inner = "  ".repeat(depth + 1);
+            for line in block.split('\n') {
+                self.line(format!("{inner}{line}"));
+            }
+            return;
+        }
         for payload in &node.payloads {
             self.payload(payload, depth + 1);
         }
@@ -170,15 +179,37 @@ fn longest_run(text: &str, ch: char) -> usize {
     best
 }
 
-/// A leaf emits as a paragraph block when it says so — or when it has no
-/// choice: a row is one line, so a value containing a newline cannot be one.
-/// Demoting the PRESENTATION flag loses `form`; emitting a broken row would
-/// lose the VALUE, and the value is the thing the node is for.
+/// A leaf emits as a paragraph block when it says so. A row leaf whose value
+/// contains a newline cannot be one line, and emits as a literal block
+/// instead ([`block_text`]).
 fn is_paragraph(node: &Node) -> bool {
-    matches!(
-        &node.kind,
-        NodeKind::Leaf(l) if l.form == crate::model::LeafForm::Paragraph || l.text.contains('\n')
-    )
+    matches!(&node.kind, NodeKind::Leaf(l) if l.form == crate::model::LeafForm::Paragraph)
+}
+
+/// The text a node emits as a literal block (spec §8 rule 8), if it does: a
+/// Literal leaf, a row leaf holding a newline, or a member whose RHS is one
+/// literal part that a one-line RHS could not carry (a newline, a lone `|`,
+/// an arrow that would read back as a sink, or an empty RHS that is present).
+fn block_text(node: &Node) -> Option<&str> {
+    match &node.kind {
+        NodeKind::Leaf(l) => {
+            let block = match l.form {
+                crate::model::LeafForm::Literal => true,
+                crate::model::LeafForm::Row => l.text.contains('\n'),
+                crate::model::LeafForm::Paragraph => false,
+            };
+            block.then_some(l.text.as_str())
+        }
+        NodeKind::Member(m) if m.sink.is_none() => {
+            let rhs = m.rhs.as_ref()?;
+            if rhs.is_empty() {
+                return Some("");
+            }
+            rhs.as_literal()
+                .filter(|t| t.contains('\n') || t.trim() == "|" || t.contains("->"))
+        }
+        _ => None,
+    }
 }
 
 /// An object carried as a heading, or an UNTAGGED object — which has no row
@@ -273,14 +304,20 @@ fn row_body(node: &Node, inline: usize) -> String {
             let colon = m.rhs.is_some() || m.sigil.is_none();
             let name = emit_name(&m.name, m.sigil.is_none());
             seg.push(if colon { format!("{name}:") } else { name });
-            if let Some(rhs) = &m.rhs {
+            if block_text(node).is_some() {
+                seg.push("|".to_string());
+            } else if let Some(rhs) = &m.rhs {
                 seg.push(emit_text(rhs, false, false, false));
             }
             if let Some(path) = &m.sink {
                 seg.push(format!("-> {path}"));
             }
         }
-        NodeKind::Leaf(l) => seg.push(emit_leaf(&l.text)),
+        NodeKind::Leaf(l) => seg.push(if block_text(node).is_some() {
+            "|".to_string()
+        } else {
+            emit_leaf(&l.text)
+        }),
         NodeKind::Fallback(f) => seg.push(f.text.clone()),
     }
     seg.into_iter()
@@ -342,6 +379,7 @@ fn emit_leaf(text: &str) -> String {
     if text != text.trim()
         || text.starts_with('"')
         || text.starts_with('[')
+        || text == "|"
         || text.contains('\n')
         || colon_anywhere(text)
     {

@@ -159,3 +159,108 @@ fn strict_mode_accepts_every_block() {
 fn a_leaf_block_is_not_a_fallback() {
     assert!(matches!(nodes("- |\n  [x\n")[0].kind, NodeKind::Leaf(_)));
 }
+
+// -- emission (spec §8 rule 8) -------------------------------------------------
+
+mod emission {
+    use libtypedmd::{
+        emit, emit_document, parse, Document, Leaf, LeafForm, Member, Node, Sigil, Text,
+    };
+
+    const SOURCES: &[&str] = &[
+        "- |\n  a: b\n  x=y\n  - item\n  # heading\n  > quote\n  ```rust\n  fn f() {}\n  ```\n  {{ slot }}\n  one\n\n  two\n",
+        "- before\n- |\n  a: b\n- after: 1\n",
+        "- |\n    deep\n      deeper\n    deep\n",
+        "- say: |\n  hello: world\n  again\n",
+        "- [abc] say: |\n  hello: world\n  again\n",
+        "- say: |\n  hi {{ [abc] who }}\n",
+        "- |\n- say: |\n- [abc] sigil: |\n- last\n",
+        "- [Card] A\n  - [Card] B\n    - |\n      a: b\n      - c\n    - after\n  - sibling\n",
+        "- | text\n  more\n- |x\n- \"|\"\n",
+        "# [Card] A\n\n1. |\n   x: y\n",
+        "- |\n  a\n\n\n  b\n",
+        "- |\n  one line\n- say: |\n  one line\n",
+        "- say: |\n  a -> b\n",
+        "- |\n  |\n- say: |\n  |\n",
+    ];
+
+    #[test]
+    fn every_parsed_block_round_trips_and_is_a_fixed_point() {
+        for src in SOURCES {
+            let graph = parse(src);
+            let once = emit(&graph);
+            assert_eq!(parse(&once), graph, "{src:?} emitted as {once:?}");
+            assert_eq!(emit(&parse(&once)), once, "{src:?} is not a fixed point");
+        }
+    }
+
+    #[test]
+    fn blocks_emit_as_blocks() {
+        let out = emit(&parse(
+            "- |\n  a: b\n\n  c\n- say: |\n  d\n  e\n- [abc] n: |\n  f\n  g\n",
+        ));
+        assert_eq!(
+            out,
+            "- |\n  a: b\n\n  c\n- say: |\n  d\n  e\n- [abc] n: |\n  f\n  g\n"
+        );
+    }
+
+    #[test]
+    fn blocks_indent_two_spaces_under_the_row() {
+        let out = emit(&parse("- [Card] A\n  - [Card] B\n    - |\n      a: b\n"));
+        assert_eq!(out, "- [Card] A\n  - [Card] B\n    - |\n      a: b\n");
+    }
+
+    #[test]
+    fn a_built_leaf_with_a_colon_and_a_newline_round_trips() {
+        let doc = Document::with_nodes(vec![Node::leaf("a: b\nc")]);
+        let out = emit_document(&doc);
+        assert_eq!(out, "- |\n  a: b\n  c\n");
+        let back = parse(&out).documents.remove(0);
+        assert_eq!(back.nodes[0].as_leaf().unwrap().text, "a: b\nc");
+        assert_eq!(emit_document(&back), out);
+    }
+
+    #[test]
+    fn a_single_line_leaf_keeps_the_quote_rule_unless_it_is_literal() {
+        let row = Document::with_nodes(vec![Node::leaf("a: b")]);
+        assert_eq!(emit_document(&row), "- \"a: b\"\n");
+        let lit = Node::new(libtypedmd::NodeKind::Leaf(Leaf {
+            text: "a: b".into(),
+            form: LeafForm::Literal,
+        }));
+        let doc = Document::with_nodes(vec![lit]);
+        let out = emit_document(&doc);
+        assert_eq!(out, "- |\n  a: b\n");
+        assert_eq!(parse(&out).documents.remove(0), doc);
+    }
+
+    #[test]
+    fn a_lone_bar_is_quoted_so_it_does_not_open_a_block() {
+        let doc = Document::with_nodes(vec![Node::leaf("|")]);
+        let out = emit_document(&doc);
+        assert_eq!(out, "- \"|\"\n");
+        assert_eq!(parse(&out).documents.remove(0), doc);
+    }
+
+    #[test]
+    fn built_members_with_literal_blocks_round_trip() {
+        for rhs in ["x\ny", "|", "", "a -> b"] {
+            let doc = Document::with_nodes(vec![
+                Node::member("say").with_rhs(Text::literal(rhs)),
+                Node::typed(Sigil::String, "n").with_rhs(Text::literal(rhs)),
+            ]);
+            let out = emit_document(&doc);
+            assert_eq!(
+                parse(&out).documents.remove(0),
+                doc,
+                "rhs {rhs:?} emitted as {out:?}"
+            );
+            assert_eq!(emit_document(&parse(&out).documents.remove(0)), out);
+        }
+        // `Member::default()` has no RHS and still emits one-line.
+        let none = Document::with_nodes(vec![Node::member("m")]);
+        assert_eq!(emit_document(&none), "- m:\n");
+        let _ = Member::default();
+    }
+}
