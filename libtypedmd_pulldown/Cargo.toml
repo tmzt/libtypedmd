@@ -1,6 +1,6 @@
 [package]
 name = "libtypedmd_pulldown"
-version = "0.1.0"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "A `pulldown-cmark` block substrate for libtypedmd, GFM disabled."
