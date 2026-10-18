@@ -22,7 +22,11 @@ pub struct Span {
 
 impl Span {
     pub fn new(text: impl Into<String>, line: usize, column: usize) -> Self {
-        Self { text: text.into(), line, column }
+        Self {
+            text: text.into(),
+            line,
+            column,
+        }
     }
 }
 
@@ -30,10 +34,22 @@ impl Span {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Block {
     /// Level 1–6 plus the verbatim inline source of the heading text.
-    Heading { level: u8, source: Span },
-    List { ordered: bool, items: Vec<ListItem> },
-    Paragraph { lines: Vec<Span> },
-    CodeFence { info: String, body: String, line: usize },
+    Heading {
+        level: u8,
+        source: Span,
+    },
+    List {
+        ordered: bool,
+        items: Vec<ListItem>,
+    },
+    Paragraph {
+        lines: Vec<Span>,
+    },
+    CodeFence {
+        info: String,
+        body: String,
+        line: usize,
+    },
     /// `***` / `___` only — the pre-pass owns `---` (spec §6.1).
     ThematicBreak,
 }
@@ -148,9 +164,13 @@ pub fn merge_adjacent_lists(blocks: Vec<Block>) -> Vec<Block> {
             other => other,
         };
         match (out.last_mut(), block) {
-            (Some(Block::List { ordered: prev, items: into }), Block::List { ordered, mut items })
-                if *prev == ordered =>
-            {
+            (
+                Some(Block::List {
+                    ordered: prev,
+                    items: into,
+                }),
+                Block::List { ordered, mut items },
+            ) if *prev == ordered => {
                 into.append(&mut items);
             }
             (_, block) => out.push(block),

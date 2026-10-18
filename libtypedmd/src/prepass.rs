@@ -31,7 +31,10 @@ fn is_blank(line: &str) -> bool {
 /// A file with no structural `---` is ONE document with an empty envelope
 /// (spec §1), so this never returns an empty vector.
 pub fn split_stream(input: &str) -> Vec<RawDocument> {
-    let lines: Vec<&str> = input.split('\n').map(|l| l.strip_suffix('\r').unwrap_or(l)).collect();
+    let lines: Vec<&str> = input
+        .split('\n')
+        .map(|l| l.strip_suffix('\r').unwrap_or(l))
+        .collect();
 
     let mut docs = Vec::new();
     let mut i = 0usize;

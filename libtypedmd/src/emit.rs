@@ -6,9 +6,7 @@
 //! `input`; what is required is that the graph survives, and that the output
 //! is canonical, so the emitter has a fixed point.
 
-use crate::model::{
-    Document, Node, NodeKind, Payload, Placement, Stream, Text, TextPart,
-};
+use crate::model::{Document, Node, NodeKind, Payload, Placement, Stream, Text, TextPart};
 use crate::row::{colon_anywhere, stops_anywhere};
 
 /// Emit a whole stream. Documents are joined by a single `---` line, blank
@@ -188,9 +186,7 @@ fn is_paragraph(node: &Node) -> bool {
 /// only thing it can be.
 fn is_heading_candidate(node: &Node) -> bool {
     match &node.kind {
-        NodeKind::Object(o) => {
-            o.carrier == crate::model::Carrier::Heading || o.tag.is_none()
-        }
+        NodeKind::Object(o) => o.carrier == crate::model::Carrier::Heading || o.tag.is_none(),
         _ => false,
     }
 }
@@ -220,7 +216,9 @@ fn inline_count(node: &Node) -> usize {
 }
 
 fn inline_eligible(node: &Node) -> bool {
-    let Some(m) = node.as_member() else { return false };
+    let Some(m) = node.as_member() else {
+        return false;
+    };
     m.placement == Placement::Inline
         && m.sigil.is_none()
         && m.sink.is_none()
@@ -285,11 +283,17 @@ fn row_body(node: &Node, inline: usize) -> String {
         NodeKind::Leaf(l) => seg.push(emit_leaf(&l.text)),
         NodeKind::Fallback(f) => seg.push(f.text.clone()),
     }
-    seg.into_iter().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ")
+    seg.into_iter()
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn valid_token(token: &str) -> bool {
-    !token.is_empty() && !token.chars().any(|c| c.is_whitespace() || c == '[' || c == ']')
+    !token.is_empty()
+        && !token
+            .chars()
+            .any(|c| c.is_whitespace() || c == '[' || c == ']')
 }
 
 fn emit_text(text: &Text, quote_first: bool, colon: bool, bracket: bool) -> String {

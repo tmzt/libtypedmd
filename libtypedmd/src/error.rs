@@ -18,7 +18,11 @@ pub struct ParseError {
 
 impl ParseError {
     pub fn new(message: impl Into<String>, location: Location) -> Self {
-        Self { message: message.into(), location, claim: None }
+        Self {
+            message: message.into(),
+            location,
+            claim: None,
+        }
     }
 
     pub fn with_claim(mut self, claim: Claim) -> Self {

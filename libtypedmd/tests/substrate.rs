@@ -55,7 +55,10 @@ fn a_substrate_that_drops_one_block_is_caught() {
     }
     let divergence = conformance::check(&DropsLast).expect_err("a dropped block must be caught");
     assert_eq!(divergence.kind, DivergenceKind::Blocks);
-    assert!(conformance::divergences(&DropsLast).len() > 8, "one corpus entry is not a check");
+    assert!(
+        conformance::divergences(&DropsLast).len() > 8,
+        "one corpus entry is not a check"
+    );
 }
 
 /// **The span pin.** A substrate that REBUILDS a span from interpreted inlines
@@ -120,14 +123,24 @@ fn parse_with_substrate_uses_the_substrate_it_is_given() {
     struct AlwaysOneHeading;
     impl MarkdownParser for AlwaysOneHeading {
         fn parse_body(&self, _: &str) -> Vec<Block> {
-            vec![Block::Heading { level: 1, source: Span::new("[Record] Fixed", 1, 3) }]
+            vec![Block::Heading {
+                level: 1,
+                source: Span::new("[Record] Fixed", 1, 3),
+            }]
         }
     }
-    let stream =
-        parse_with_substrate("- [abc] ignored\n- [abc] entirely\n", &ParseOptions::lenient(), &AlwaysOneHeading)
-            .expect("lenient");
+    let stream = parse_with_substrate(
+        "- [abc] ignored\n- [abc] entirely\n",
+        &ParseOptions::lenient(),
+        &AlwaysOneHeading,
+    )
+    .expect("lenient");
     let nodes = &stream.documents[0].nodes;
-    assert_eq!(nodes.len(), 1, "the graph came from the substrate, not the input");
+    assert_eq!(
+        nodes.len(),
+        1,
+        "the graph came from the substrate, not the input"
+    );
     assert_eq!(nodes[0].as_object().unwrap().tag.as_deref(), Some("Record"));
     assert_eq!(nodes[0].as_object().unwrap().head.render(), "Fixed");
 }
@@ -158,14 +171,22 @@ fn an_unterminated_fence_gains_no_phantom_line() {
     let blocks = NativeParser.parse_body("```\n");
     assert_eq!(
         blocks,
-        vec![Block::CodeFence { info: String::new(), body: String::new(), line: 1 }]
+        vec![Block::CodeFence {
+            info: String::new(),
+            body: String::new(),
+            line: 1
+        }]
     );
 
     // A blank line that IS in the source stays in the source.
     let blocks = NativeParser.parse_body("```\na\n\n");
     assert_eq!(
         blocks,
-        vec![Block::CodeFence { info: String::new(), body: "a\n\n".to_string(), line: 1 }]
+        vec![Block::CodeFence {
+            info: String::new(),
+            body: "a\n\n".to_string(),
+            line: 1
+        }]
     );
 }
 
@@ -178,14 +199,20 @@ fn a_lazy_continuation_does_not_need_an_indented_line_first() {
     let without = NativeParser.parse_body("- a\nb\n");
     let text = |blocks: &Vec<Block>| format!("{blocks:?}");
 
-    assert!(text(&without).contains("\"b\""), "the continuation is somewhere: {:?}", without);
+    assert!(
+        text(&without).contains("\"b\""),
+        "the continuation is somewhere: {:?}",
+        without
+    );
     match &without[..] {
         [Block::List { items, .. }] => {
             assert_eq!(items.len(), 1);
             assert_eq!(items[0].source.text, "a");
             assert_eq!(
                 items[0].blocks,
-                vec![Block::Paragraph { lines: vec![Span::new("b", 2, 1)] }],
+                vec![Block::Paragraph {
+                    lines: vec![Span::new("b", 2, 1)]
+                }],
                 "the lazy line is the item's, as it is when an indented line precedes it"
             );
         }
@@ -205,7 +232,11 @@ fn a_quote_line_ends_an_items_continuation() {
         [Block::List { items, .. }, Block::Paragraph { lines }] => {
             assert_eq!(items[0].source.text, "a");
             assert!(items[0].blocks.is_empty(), "the quote is not the item's");
-            assert_eq!(lines.len(), 2, "and the quote's own lines are one run: {lines:?}");
+            assert_eq!(
+                lines.len(),
+                2,
+                "and the quote's own lines are one run: {lines:?}"
+            );
             assert_eq!(lines[0].text, "> q");
             assert_eq!(lines[1].text, "> r");
         }

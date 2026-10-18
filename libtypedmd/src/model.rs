@@ -62,7 +62,10 @@ impl Document {
     }
 
     pub fn with_nodes(nodes: Vec<Node>) -> Self {
-        Self { nodes, ..Self::default() }
+        Self {
+            nodes,
+            ..Self::default()
+        }
     }
 }
 
@@ -87,7 +90,10 @@ impl Envelope {
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.entries.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
+        self.entries
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
     }
 
     pub fn entries(&self) -> &[(String, String)] {
@@ -123,7 +129,10 @@ impl Payload {
         if !body.is_empty() && !body.ends_with('\n') {
             body.push('\n');
         }
-        Self { info: info.into(), body }
+        Self {
+            info: info.into(),
+            body,
+        }
     }
 }
 
@@ -145,7 +154,11 @@ pub struct Node {
 
 impl Node {
     pub fn new(kind: NodeKind) -> Self {
-        Self { kind, nodes: Vec::new(), payloads: Vec::new() }
+        Self {
+            kind,
+            nodes: Vec::new(),
+            payloads: Vec::new(),
+        }
     }
 
     /// An object with a consumer tag: `- [Card] Profile`.
@@ -188,11 +201,17 @@ impl Node {
     }
 
     pub fn leaf(text: impl Into<String>) -> Self {
-        Self::new(NodeKind::Leaf(Leaf { text: text.into(), form: LeafForm::Row }))
+        Self::new(NodeKind::Leaf(Leaf {
+            text: text.into(),
+            form: LeafForm::Row,
+        }))
     }
 
     pub fn paragraph(text: impl Into<String>) -> Self {
-        Self::new(NodeKind::Leaf(Leaf { text: text.into(), form: LeafForm::Paragraph }))
+        Self::new(NodeKind::Leaf(Leaf {
+            text: text.into(),
+            form: LeafForm::Paragraph,
+        }))
     }
 
     // -- builder helpers ---------------------------------------------------
@@ -376,7 +395,12 @@ impl PartialEq for Claim {
 
 impl Claim {
     pub fn none(location: Location) -> Self {
-        Self { shape: ClaimShape::None, token: None, attrs: Vec::new(), location }
+        Self {
+            shape: ClaimShape::None,
+            token: None,
+            attrs: Vec::new(),
+            location,
+        }
     }
 }
 
@@ -484,11 +508,17 @@ pub struct Slot {
 
 impl Slot {
     pub fn new(expr: impl Into<String>) -> Self {
-        Self { sigil: None, expr: expr.into() }
+        Self {
+            sigil: None,
+            expr: expr.into(),
+        }
     }
 
     pub fn typed(sigil: Sigil, expr: impl Into<String>) -> Self {
-        Self { sigil: Some(sigil), expr: expr.into() }
+        Self {
+            sigil: Some(sigil),
+            expr: expr.into(),
+        }
     }
 
     /// `{{ [abc] expr }}` — single interior padding spaces (spec §8.4).

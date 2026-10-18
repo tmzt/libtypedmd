@@ -31,7 +31,12 @@ struct Built {
 
 impl<'a> Assembler<'a> {
     pub(crate) fn new(aliases: &'a AliasTable, doc_index: usize) -> Self {
-        Self { aliases, doc_index, base_line: 1, errors: Vec::new() }
+        Self {
+            aliases,
+            doc_index,
+            base_line: 1,
+            errors: Vec::new(),
+        }
     }
 
     pub(crate) fn document(
@@ -43,9 +48,17 @@ impl<'a> Assembler<'a> {
         self.base_line = raw.body_line;
         let blocks = substrate.parse_body(&raw.body);
         let (built, payloads) = self.blocks(&blocks);
-        let at = Location { document: self.doc_index, line: raw.body_line, column: 1 };
+        let at = Location {
+            document: self.doc_index,
+            line: raw.body_line,
+            column: 1,
+        };
         let nodes = self.seal(Vec::new(), built, at);
-        Document { envelope, payloads, nodes }
+        Document {
+            envelope,
+            payloads,
+            nodes,
+        }
     }
 
     fn envelope(&mut self, raw: &RawDocument) -> Envelope {
@@ -54,12 +67,18 @@ impl<'a> Assembler<'a> {
             if text.trim().is_empty() {
                 continue;
             }
-            let at = Location { document: self.doc_index, line: *line, column: 1 };
+            let at = Location {
+                document: self.doc_index,
+                line: *line,
+                column: 1,
+            };
             match envelope_pair(text) {
                 Some((key, value)) => {
                     if envelope.get(&key).is_some() {
-                        self.errors
-                            .push(ParseError::new(format!("duplicate envelope key `{key}`"), at));
+                        self.errors.push(ParseError::new(
+                            format!("duplicate envelope key `{key}`"),
+                            at,
+                        ));
                     }
                     envelope.set(key, value);
                 }
@@ -119,7 +138,10 @@ impl<'a> Assembler<'a> {
                         .collect::<Vec<_>>()
                         .join("\n");
                     let at = lines.first().map(|s| self.location(s)).unwrap_or_default();
-                    let node = Node::new(NodeKind::Leaf(Leaf { text, form: LeafForm::Paragraph }));
+                    let node = Node::new(NodeKind::Leaf(Leaf {
+                        text,
+                        form: LeafForm::Paragraph,
+                    }));
                     self.place_many(&mut open, &mut roots, vec![Built { node, location: at }]);
                 }
                 Block::CodeFence { info, body, .. } => {
@@ -209,8 +231,10 @@ impl<'a> Assembler<'a> {
             .collect();
         all.extend(children);
 
-        let names: Vec<Option<String>> =
-            all.iter().map(|b| b.node.as_member().map(|m| m.name.clone())).collect();
+        let names: Vec<Option<String>> = all
+            .iter()
+            .map(|b| b.node.as_member().map(|m| m.name.clone()))
+            .collect();
         let mut keep = vec![true; all.len()];
         for i in 0..names.len() {
             let Some(name) = &names[i] else { continue };

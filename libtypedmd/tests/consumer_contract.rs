@@ -14,7 +14,10 @@ fn without_a_table_only_the_canonical_sigils_match() {
     assert!(empty.is_empty());
     assert_eq!(empty.resolve("abc"), Annotation::Sigil(Sigil::String));
     assert_eq!(empty.resolve("o"), Annotation::Tag("o".to_string()));
-    assert_eq!(empty.resolve("Screen"), Annotation::Tag("Screen".to_string()));
+    assert_eq!(
+        empty.resolve("Screen"),
+        Annotation::Tag("Screen".to_string())
+    );
 }
 
 /// The table covers BOTH sigils and tags.
@@ -37,8 +40,14 @@ fn an_alias_never_changes_a_nodes_kind() {
     aliases.sigil("txt", Sigil::String).tag("txt-box", "Text");
 
     let stream = parse_aliased("- [txt] id\n- [txt-box] Hello\n", aliases);
-    assert!(stream.documents[0].nodes[0].as_member().is_some(), "sigil alias -> Member");
-    assert!(stream.documents[0].nodes[1].as_object().is_some(), "tag alias -> Object");
+    assert!(
+        stream.documents[0].nodes[0].as_member().is_some(),
+        "sigil alias -> Member"
+    );
+    assert!(
+        stream.documents[0].nodes[1].as_object().is_some(),
+        "tag alias -> Object"
+    );
 }
 
 /// Canonical sigils are tested FIRST, so a table cannot shadow one and
@@ -56,12 +65,17 @@ fn a_table_cannot_shadow_a_canonical_sigil() {
 #[test]
 fn legacy_spellings_normalise_on_emission() {
     let mut aliases = AliasTable::new();
-    aliases.sigil("o", Sigil::Link).sigil("\u{29AF}", Sigil::String);
+    aliases
+        .sigil("o", Sigil::Link)
+        .sigil("\u{29AF}", Sigil::String);
 
     let stream = parse_aliased("- [o] team -> teams.id\n- [\u{29AF}] name\n", aliases);
     let out = emit(&stream);
     assert_eq!(out, "- [-] team -> teams.id\n- [abc] name\n");
-    assert!(!out.contains("[o]") && !out.contains('\u{29AF}'), "legacy spellings are gone:\n{out}");
+    assert!(
+        !out.contains("[o]") && !out.contains('\u{29AF}'),
+        "legacy spellings are gone:\n{out}"
+    );
 }
 
 /// A slot's optional leading token is a SIGIL position, so the table's sigil
@@ -71,7 +85,10 @@ fn aliases_apply_inside_slots() {
     let mut aliases = AliasTable::new();
     aliases.sigil("s", Sigil::String).tag("Panel", "Card");
 
-    let stream = parse_aliased("- [Text] {{ [s] a.b }}\n- [Text] {{ [Panel] c.d }}\n", aliases);
+    let stream = parse_aliased(
+        "- [Text] {{ [s] a.b }}\n- [Text] {{ [Panel] c.d }}\n",
+        aliases,
+    );
     let nodes = &stream.documents[0].nodes;
     let typed = nodes[0].as_object().unwrap().head.as_slot().unwrap();
     assert_eq!(typed.sigil, Some(Sigil::String));
@@ -91,7 +108,14 @@ fn aliases_apply_inside_slots() {
 #[test]
 fn the_core_names_no_consumer() {
     const FORBIDDEN: &[&str] = &[
-        "tsx", "screen", "highbay", "storyboard", "widget", "prosemd", "cascada", "wgpu",
+        "tsx",
+        "screen",
+        "highbay",
+        "storyboard",
+        "widget",
+        "prosemd",
+        "cascada",
+        "wgpu",
     ];
 
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
@@ -109,7 +133,9 @@ fn the_core_names_no_consumer() {
                 continue;
             }
             files += 1;
-            let text = std::fs::read_to_string(&path).expect("utf-8 source").to_lowercase();
+            let text = std::fs::read_to_string(&path)
+                .expect("utf-8 source")
+                .to_lowercase();
             for term in FORBIDDEN {
                 for (index, line) in text.lines().enumerate() {
                     if line.contains(term) {
@@ -124,8 +150,15 @@ fn the_core_names_no_consumer() {
         }
     }
 
-    assert!(files >= 9, "the walk found only {files} source files; it is not looking at src/");
-    assert!(offences.is_empty(), "consumer terminology in the core:\n{}", offences.join("\n"));
+    assert!(
+        files >= 9,
+        "the walk found only {files} source files; it is not looking at src/"
+    );
+    assert!(
+        offences.is_empty(),
+        "consumer terminology in the core:\n{}",
+        offences.join("\n")
+    );
 }
 
 /// The crate is STANDALONE: nothing it reads at test time lives outside its
@@ -164,5 +197,8 @@ fn the_crate_reads_nothing_outside_itself() {
             }
         }
     }
-    assert!(checked >= 10, "only {checked} files checked; the walk is wrong");
+    assert!(
+        checked >= 10,
+        "only {checked} files checked; the walk is wrong"
+    );
 }

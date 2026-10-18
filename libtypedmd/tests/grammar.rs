@@ -20,7 +20,11 @@ fn the_seven_sigils() {
     ];
     assert_eq!(SIGILS.len(), 7);
     for (token, sigil) in expected {
-        assert_eq!(Sigil::from_token(token), Some(sigil), "`[{token}]` is a sigil");
+        assert_eq!(
+            Sigil::from_token(token),
+            Some(sigil),
+            "`[{token}]` is a sigil"
+        );
         assert_eq!(sigil.token(), token, "and emits as itself");
         let node = first(&format!("- [{token}] name\n"));
         assert_eq!(node.as_member().unwrap().sigil, Some(sigil));
@@ -31,8 +35,14 @@ fn the_seven_sigils() {
 /// No patterns: a token that merely LOOKS like a sigil is a tag.
 #[test]
 fn near_misses_are_tags_not_sigils() {
-    for token in ["abcd", "ABC", "1", "1.2", "##", "32", "__", "$$", "Zorp", "123", "Screen"] {
-        assert_eq!(Sigil::from_token(token), None, "`[{token}]` must not be a sigil");
+    for token in [
+        "abcd", "ABC", "1", "1.2", "##", "32", "__", "$$", "Zorp", "123", "Screen",
+    ] {
+        assert_eq!(
+            Sigil::from_token(token),
+            None,
+            "`[{token}]` must not be a sigil"
+        );
         let node = first(&format!("- [{token}] head\n"));
         assert_eq!(
             node.as_object().unwrap().tag.as_deref(),
@@ -64,7 +74,10 @@ fn a_sigil_types_a_row_and_a_slot() {
 fn only_the_first_bracketed_token_is_an_annotation() {
     let node = first("- [Card] see [abc] and [#] below\n");
     assert_eq!(node.as_object().unwrap().tag.as_deref(), Some("Card"));
-    assert_eq!(node.as_object().unwrap().head.render(), "see [abc] and [#] below");
+    assert_eq!(
+        node.as_object().unwrap().head.render(),
+        "see [abc] and [#] below"
+    );
 }
 
 /// `- name: value` and `name=value` produce the SAME node: one name, one RHS.
@@ -81,7 +94,10 @@ fn one_member_two_spellings() {
     assert_eq!(a.sigil, b.sigil);
     assert_eq!(a.sink, b.sink);
     assert_eq!(row.nodes[0].nodes, inline.nodes[0].nodes);
-    assert_eq!((a.placement, b.placement), (Placement::Row, Placement::Inline));
+    assert_eq!(
+        (a.placement, b.placement),
+        (Placement::Row, Placement::Inline)
+    );
 }
 
 /// A head may contain spaces and ends at the first of: an inline property, an
@@ -95,16 +111,25 @@ fn head_delimitation() {
     // colon passes even when the rule is gone.
     let url = first("- http://example.com/x: the value\n");
     assert_eq!(url.as_member().unwrap().name, "http://example.com/x");
-    assert_eq!(url.as_member().unwrap().rhs.as_ref().unwrap().render(), "the value");
+    assert_eq!(
+        url.as_member().unwrap().rhs.as_ref().unwrap().render(),
+        "the value"
+    );
 
     let heading = first("# http://example.com/x\n");
-    assert_eq!(heading.as_object().unwrap().head.render(), "http://example.com/x");
+    assert_eq!(
+        heading.as_object().unwrap().head.render(),
+        "http://example.com/x"
+    );
     assert_eq!(heading.as_object().unwrap().tag, None);
 
     // And in the RHS, where rest-of-line keeps it whole.
     let rhs = first("- link: http://example.com/x\n");
     assert_eq!(rhs.as_member().unwrap().name, "link");
-    assert_eq!(rhs.as_member().unwrap().rhs.as_ref().unwrap().render(), "http://example.com/x");
+    assert_eq!(
+        rhs.as_member().unwrap().rhs.as_ref().unwrap().render(),
+        "http://example.com/x"
+    );
 
     // An inline property ends the head.
     let props = first("- [Screen] Main Window mode=wide\n");
@@ -119,7 +144,10 @@ fn head_delimitation() {
     // A head beginning with a quote runs to the closing quote, so it may
     // contain the terminators literally.
     let quoted = first("- [Card] \"Notes: draft -> x\" mode=wide\n");
-    assert_eq!(quoted.as_object().unwrap().head.render(), "Notes: draft -> x");
+    assert_eq!(
+        quoted.as_object().unwrap().head.render(),
+        "Notes: draft -> x"
+    );
     assert_eq!(quoted.nodes[0].as_member().unwrap().name, "mode");
     assert_eq!(quoted.as_object().unwrap().sink, None);
 }
@@ -128,8 +156,22 @@ fn head_delimitation() {
 /// positions it can occupy.
 #[test]
 fn sinks() {
-    assert_eq!(first("- [Card] X -> a.b\n").as_object().unwrap().sink.as_deref(), Some("a.b"));
-    assert_eq!(first("- [-] team -> teams.id\n").as_member().unwrap().sink.as_deref(), Some("teams.id"));
+    assert_eq!(
+        first("- [Card] X -> a.b\n")
+            .as_object()
+            .unwrap()
+            .sink
+            .as_deref(),
+        Some("a.b")
+    );
+    assert_eq!(
+        first("- [-] team -> teams.id\n")
+            .as_member()
+            .unwrap()
+            .sink
+            .as_deref(),
+        Some("teams.id")
+    );
 
     let with_rhs = first("- name: value -> some.path\n");
     let m = with_rhs.as_member().unwrap();
@@ -162,7 +204,10 @@ fn inline_property_values() {
 fn slots() {
     // No sigil.
     let plain = first("- [Text] {{ a.b }}\n");
-    assert_eq!(plain.as_object().unwrap().head.as_slot().unwrap().sigil, None);
+    assert_eq!(
+        plain.as_object().unwrap().head.as_slot().unwrap().sigil,
+        None
+    );
 
     // A bracketed token that is NOT a sigil is part of the expression: slots
     // take types, not tags.
@@ -181,16 +226,27 @@ fn slots() {
     // closing `}}` an unescaped `{{` is literal anyway, so a test that omits
     // the `}}` passes even when the emitter stops escaping.
     let escaped = first("- [Text] literal \\{{ here\n");
-    assert_eq!(escaped.as_object().unwrap().head.render(), "literal {{ here");
+    assert_eq!(
+        escaped.as_object().unwrap().head.render(),
+        "literal {{ here"
+    );
 
     let closed = first("- [Text] \\{{ x }} here\n");
-    assert_eq!(closed.as_object().unwrap().head.parts().len(), 1, "one literal, not a slot");
+    assert_eq!(
+        closed.as_object().unwrap().head.parts().len(),
+        1,
+        "one literal, not a slot"
+    );
     assert_eq!(closed.as_object().unwrap().head.render(), "{{ x }} here");
 
     let stream = parse("- [Text] \\{{ x }} here\n");
     let out = emit_document(&stream.documents[0]);
     assert_eq!(out, "- [Text] \\{{ x }} here\n", "the escape is re-emitted");
-    assert_eq!(parse(&out), stream, "and without it the literal would become a slot");
+    assert_eq!(
+        parse(&out),
+        stream,
+        "and without it the literal would become a slot"
+    );
 
     // Not recognized inside a fenced payload.
     let payload = parse("- [Module] m\n  ```\n  {{ [abc] not.a.slot }}\n  ```\n");
@@ -199,17 +255,35 @@ fn slots() {
 
     // Nor in an envelope value.
     let env = parse("---\nbase: {{ [abc] not.a.slot }}\n---\n\n- x: 1\n");
-    assert_eq!(env.documents[0].envelope.get("base"), Some("{{ [abc] not.a.slot }}"));
+    assert_eq!(
+        env.documents[0].envelope.get("base"),
+        Some("{{ [abc] not.a.slot }}")
+    );
 }
 
 /// Row classification (spec §3, rule 2).
 #[test]
 fn row_classification() {
-    assert!(first("- [abc] id\n").as_member().is_some(), "core sigil -> Member");
-    assert!(first("- [Zorp] id\n").as_object().is_some(), "non-core tag -> Object");
-    assert!(first("- name: value\n").as_member().is_some(), "colon-RHS -> Member");
-    assert!(first("- just prose\n").as_leaf().is_some(), "no annotation, no colon -> Leaf");
-    assert!(first("# Untitled\n").as_object().is_some(), "untagged heading -> Object");
+    assert!(
+        first("- [abc] id\n").as_member().is_some(),
+        "core sigil -> Member"
+    );
+    assert!(
+        first("- [Zorp] id\n").as_object().is_some(),
+        "non-core tag -> Object"
+    );
+    assert!(
+        first("- name: value\n").as_member().is_some(),
+        "colon-RHS -> Member"
+    );
+    assert!(
+        first("- just prose\n").as_leaf().is_some(),
+        "no annotation, no colon -> Leaf"
+    );
+    assert!(
+        first("# Untitled\n").as_object().is_some(),
+        "untagged heading -> Object"
+    );
     assert_eq!(first("# Untitled\n").as_object().unwrap().tag, None);
 }
 
@@ -233,7 +307,10 @@ fn payload_bodies_survive_their_own_fences() {
         .with_payload(libtypedmd::Payload::new("", "```\nnested\n```\n"));
     let doc = Document::with_nodes(vec![node]);
     let out = emit_document(&doc);
-    assert!(out.contains("````"), "the fence grew to clear the body:\n{out}");
+    assert!(
+        out.contains("````"),
+        "the fence grew to clear the body:\n{out}"
+    );
     assert_eq!(parse(&out), libtypedmd::Stream::with(vec![doc]));
 }
 
@@ -245,11 +322,33 @@ fn duplicate_members_keep_the_last() {
     assert_eq!(node.nodes.len(), 2);
     assert_eq!(node.nodes[0].as_member().unwrap().name, "b");
     assert_eq!(node.nodes[1].as_member().unwrap().name, "a");
-    assert_eq!(node.nodes[1].as_member().unwrap().rhs.as_ref().unwrap().render(), "3");
+    assert_eq!(
+        node.nodes[1]
+            .as_member()
+            .unwrap()
+            .rhs
+            .as_ref()
+            .unwrap()
+            .render(),
+        "3"
+    );
 
     let crossed = first("- [Card] X a=1\n  - a: 2\n");
-    assert_eq!(crossed.nodes.len(), 1, "an inline and a row member are one plane");
-    assert_eq!(crossed.nodes[0].as_member().unwrap().rhs.as_ref().unwrap().render(), "2");
+    assert_eq!(
+        crossed.nodes.len(),
+        1,
+        "an inline and a row member are one plane"
+    );
+    assert_eq!(
+        crossed.nodes[0]
+            .as_member()
+            .unwrap()
+            .rhs
+            .as_ref()
+            .unwrap()
+            .render(),
+        "2"
+    );
 }
 
 /// The RHS is opaque: the core records one right-hand side and never decides
@@ -258,8 +357,14 @@ fn duplicate_members_keep_the_last() {
 fn the_rhs_is_opaque() {
     let schema = first("- active: Boolean\n");
     let widget = first("- active: true\n");
-    assert_eq!(schema.as_member().unwrap().rhs.as_ref().unwrap(), &Text::literal("Boolean"));
-    assert_eq!(widget.as_member().unwrap().rhs.as_ref().unwrap(), &Text::literal("true"));
+    assert_eq!(
+        schema.as_member().unwrap().rhs.as_ref().unwrap(),
+        &Text::literal("Boolean")
+    );
+    assert_eq!(
+        widget.as_member().unwrap().rhs.as_ref().unwrap(),
+        &Text::literal("true")
+    );
 }
 
 /// A payload emits immediately after its node's own row, BEFORE that node's
@@ -278,7 +383,12 @@ fn a_payload_stays_on_the_node_it_was_attached_to() {
 
     let stream = libtypedmd::Stream::with(vec![doc]);
     assert_eq!(parse(&out), stream, "and it comes back on `A`, not on `B`");
-    assert!(parse(&out).documents[0].nodes[0].nodes[0].payloads.is_empty(), "not on B");
+    assert!(
+        parse(&out).documents[0].nodes[0].nodes[0]
+            .payloads
+            .is_empty(),
+        "not on B"
+    );
 }
 
 /// [`Text`] normalises on construction — adjacent literals merge, empty
@@ -304,7 +414,10 @@ fn text_parts_are_normalised_so_equal_values_compare_equal() {
     assert_eq!(padded, Text::slot(libtypedmd::Slot::new("x")));
     assert_eq!(padded.parts().len(), 1);
 
-    assert_eq!(Text::from_parts(vec![TextPart::Literal(String::new())]), Text::empty());
+    assert_eq!(
+        Text::from_parts(vec![TextPart::Literal(String::new())]),
+        Text::empty()
+    );
     assert!(Text::empty().is_empty());
 }
 
@@ -334,7 +447,10 @@ fn emission_quotes_where_a_terminator_would_bite() {
     }
 
     // And the same values WITHOUT their terminators keep their quotes off.
-    assert_eq!(emit_document(&parse("# \"Notes draft\"\n").documents[0]), "# Notes draft\n");
+    assert_eq!(
+        emit_document(&parse("# \"Notes draft\"\n").documents[0]),
+        "# Notes draft\n"
+    );
     assert_eq!(
         emit_document(&parse("- [List] label=\"oneword\"\n").documents[0]),
         "- [List] label=oneword\n"
@@ -349,8 +465,18 @@ fn graph_equality_ignores_locations() {
     let late = parse("\n\n\n- [bad token] x\n");
     assert_eq!(early.documents[0].nodes, late.documents[0].nodes);
     assert_ne!(
-        early.documents[0].nodes[0].as_fallback().unwrap().claim.location.line,
-        late.documents[0].nodes[0].as_fallback().unwrap().claim.location.line,
+        early.documents[0].nodes[0]
+            .as_fallback()
+            .unwrap()
+            .claim
+            .location
+            .line,
+        late.documents[0].nodes[0]
+            .as_fallback()
+            .unwrap()
+            .claim
+            .location
+            .line,
         "the locations really do differ"
     );
 }

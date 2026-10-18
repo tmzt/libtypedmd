@@ -37,7 +37,10 @@ fn semantic_round_trip() {
     for (i, source) in CORPUS.iter().enumerate() {
         let graph = parse(source);
         let again = parse(&emit(&graph));
-        assert_eq!(again, graph, "corpus[{i}] did not survive parse -> emit -> parse:\n{source}");
+        assert_eq!(
+            again, graph,
+            "corpus[{i}] did not survive parse -> emit -> parse:\n{source}"
+        );
     }
 }
 
@@ -77,14 +80,35 @@ fn emission_is_not_echo() {
     let out = emit(&graph);
 
     // -- the syntax changed ------------------------------------------------
-    assert_ne!(out, input, "an emitter that concatenated stored spans would pass here");
+    assert_ne!(
+        out, input,
+        "an emitter that concatenated stored spans would pass here"
+    );
     assert!(!out.contains('*'), "`*` bullets normalise to `-`:\n{out}");
-    assert!(out.starts_with("- [Screen] Inbox\n"), "one space after the marker:\n{out}");
-    assert!(out.contains("\n  - [List] "), "two-space indent per list level:\n{out}");
-    assert!(out.contains("\n    - [Text] "), "and again at the next level:\n{out}");
-    assert!(out.contains("{{ [#] inbox.threads }}"), "slots get single padding:\n{out}");
-    assert!(out.contains("{{ [abc] thread.subject }}"), "and so does the head slot:\n{out}");
-    assert!(out.contains("item_alias=thread"), "a value needing no quotes loses them:\n{out}");
+    assert!(
+        out.starts_with("- [Screen] Inbox\n"),
+        "one space after the marker:\n{out}"
+    );
+    assert!(
+        out.contains("\n  - [List] "),
+        "two-space indent per list level:\n{out}"
+    );
+    assert!(
+        out.contains("\n    - [Text] "),
+        "and again at the next level:\n{out}"
+    );
+    assert!(
+        out.contains("{{ [#] inbox.threads }}"),
+        "slots get single padding:\n{out}"
+    );
+    assert!(
+        out.contains("{{ [abc] thread.subject }}"),
+        "and so does the head slot:\n{out}"
+    );
+    assert!(
+        out.contains("item_alias=thread"),
+        "a value needing no quotes loses them:\n{out}"
+    );
 
     // -- every value survived ----------------------------------------------
     let screen = &graph.documents[0].nodes[0];
@@ -138,13 +162,22 @@ fn emission_follows_the_graph_not_the_source() {
     }
 
     let out = emit(&stream);
-    assert!(out.contains("title: NEWVALUE"), "the graph's value must reach the output:\n{out}");
-    assert!(!out.contains("OLDVALUE"), "stored source must not reach the output:\n{out}");
+    assert!(
+        out.contains("title: NEWVALUE"),
+        "the graph's value must reach the output:\n{out}"
+    );
+    assert!(
+        !out.contains("OLDVALUE"),
+        "stored source must not reach the output:\n{out}"
+    );
 
     // Removing a node must remove its row, too.
     stream.documents[0].nodes[0].nodes.pop();
     let out = emit(&stream);
-    assert!(!out.contains("[abc] name"), "a deleted node must not be echoed back:\n{out}");
+    assert!(
+        !out.contains("[abc] name"),
+        "a deleted node must not be echoed back:\n{out}"
+    );
 }
 
 /// A graph built in Rust — never parsed, so there is no source to echo.
@@ -159,7 +192,11 @@ fn emits_a_graph_that_was_never_parsed() {
         .with_child(Node::member("active").with_rhs(Text::literal("Boolean")))
         .with_payload(Payload::new("json", "{}\n"));
 
-    let doc = Document { envelope, payloads: Vec::new(), nodes: vec![record] };
+    let doc = Document {
+        envelope,
+        payloads: Vec::new(),
+        nodes: vec![record],
+    };
     let out = emit_document(&doc);
 
     assert_eq!(
@@ -204,12 +241,17 @@ fn programmatic_nodes_default_to_rows() {
 #[test]
 fn inline_placement_demotes_rather_than_lying() {
     let inline = |name: &str, value: &str| {
-        Node::member(name).with_rhs(Text::literal(value)).with_placement(Placement::Inline)
+        Node::member(name)
+            .with_rhs(Text::literal(value))
+            .with_placement(Placement::Inline)
     };
 
     // Eligible: bare name, no sigil, no sink, no children, nothing before it.
     let ok = Node::object("List", Text::empty()).with_child(inline("mode", "wide"));
-    assert_eq!(emit_document(&Document::with_nodes(vec![ok])), "- [List] mode=wide\n");
+    assert_eq!(
+        emit_document(&Document::with_nodes(vec![ok])),
+        "- [List] mode=wide\n"
+    );
 
     // A non-inline sibling precedes it.
     let preceded = Node::object("List", Text::empty())
@@ -254,7 +296,11 @@ fn heading_carrier_demotes_when_a_row_follows() {
 
     let doc = Document::with_nodes(vec![heading(), row()]);
     assert_eq!(emit_document(&doc), "- [Section] S\n- [Card] C\n");
-    assert_eq!(parse(&emit_document(&doc)).documents[0].nodes.len(), 2, "still two siblings");
+    assert_eq!(
+        parse(&emit_document(&doc)).documents[0].nodes.len(),
+        2,
+        "still two siblings"
+    );
 
     let doc = Document::with_nodes(vec![row(), heading()]);
     assert_eq!(emit_document(&doc), "- [Card] C\n\n# [Section] S\n");
@@ -274,16 +320,35 @@ fn the_graph_has_no_source_field() {
         let Stream { documents: _ } = s;
     }
     fn document(d: Document) {
-        let Document { envelope: _, payloads: _, nodes: _ } = d;
+        let Document {
+            envelope: _,
+            payloads: _,
+            nodes: _,
+        } = d;
     }
     fn node(n: Node) {
-        let Node { kind: _, nodes: _, payloads: _ } = n;
+        let Node {
+            kind: _,
+            nodes: _,
+            payloads: _,
+        } = n;
     }
     fn object(o: Object) {
-        let Object { tag: _, head: _, sink: _, carrier: _ } = o;
+        let Object {
+            tag: _,
+            head: _,
+            sink: _,
+            carrier: _,
+        } = o;
     }
     fn member(m: Member) {
-        let Member { name: _, sigil: _, rhs: _, sink: _, placement: _ } = m;
+        let Member {
+            name: _,
+            sigil: _,
+            rhs: _,
+            sink: _,
+            placement: _,
+        } = m;
     }
     fn leaf(l: Leaf) {
         let Leaf { text: _, form: _ } = l;
@@ -322,5 +387,8 @@ fn a_multiline_leaf_demotes_to_a_paragraph() {
     assert_eq!(out, "a\nb\n", "not a row:\n{out}");
     let back = parse(&out).documents.remove(0).nodes.remove(0);
     assert_eq!(back.as_leaf().unwrap().text, "a\nb", "the value survived");
-    assert_eq!(back.as_leaf().unwrap().form, libtypedmd::LeafForm::Paragraph);
+    assert_eq!(
+        back.as_leaf().unwrap().form,
+        libtypedmd::LeafForm::Paragraph
+    );
 }

@@ -21,7 +21,10 @@ fn frontmatter_is_peeled_before_the_substrate_sees_anything() {
     assert_eq!(doc.envelope.get("base"), Some("abc123"));
     assert_eq!(doc.envelope.get("from"), Some("somewhere"));
     assert_eq!(doc.nodes.len(), 1);
-    assert_eq!(doc.nodes[0].as_object().unwrap().tag.as_deref(), Some("Record"));
+    assert_eq!(
+        doc.nodes[0].as_object().unwrap().tag.as_deref(),
+        Some("Record")
+    );
 }
 
 /// The envelope is the EMISSION plane: flat `key: value`, values opaque, no
@@ -32,7 +35,11 @@ fn the_envelope_is_flat_and_opaque() {
     let env = &stream.documents[0].envelope;
     assert_eq!(env.get("base"), Some("a: b: c"));
     assert_eq!(env.get("rev"), Some("12 34"));
-    assert_eq!(stream.documents[0].nodes.len(), 1, "only the body makes nodes");
+    assert_eq!(
+        stream.documents[0].nodes.len(),
+        1,
+        "only the body makes nodes"
+    );
 }
 
 /// Duplicate envelope keys: last occurrence wins, and the survivor keeps the
@@ -41,7 +48,13 @@ fn the_envelope_is_flat_and_opaque() {
 fn duplicate_envelope_keys_keep_the_last() {
     let stream = parse("---\nbase: one\nrev: 7\nbase: two\n---\n\n- x: 1\n");
     let env = &stream.documents[0].envelope;
-    assert_eq!(env.entries(), &[("rev".to_string(), "7".to_string()), ("base".to_string(), "two".to_string())]);
+    assert_eq!(
+        env.entries(),
+        &[
+            ("rev".to_string(), "7".to_string()),
+            ("base".to_string(), "two".to_string())
+        ]
+    );
 }
 
 /// A structural `---` after content closes the document and starts the next
@@ -50,8 +63,11 @@ fn duplicate_envelope_keys_keep_the_last() {
 fn content_separator_splits_documents() {
     let stream = parse("- a: 1\n\n---\n\n- b: 2\n\n---\n\n- c: 3\n");
     assert_eq!(stream.documents.len(), 3);
-    let names: Vec<&str> =
-        stream.documents.iter().map(|d| d.nodes[0].as_member().unwrap().name.as_str()).collect();
+    let names: Vec<&str> = stream
+        .documents
+        .iter()
+        .map(|d| d.nodes[0].as_member().unwrap().name.as_str())
+        .collect();
     assert_eq!(names, ["a", "b", "c"]);
 }
 
@@ -60,7 +76,11 @@ fn content_separator_splits_documents() {
 #[test]
 fn a_dash_rule_under_a_paragraph_is_not_a_split() {
     let stream = parse("Some prose\n---\nmore prose\n");
-    assert_eq!(stream.documents.len(), 1, "a setext-shaped `---` does not split");
+    assert_eq!(
+        stream.documents.len(),
+        1,
+        "a setext-shaped `---` does not split"
+    );
 }
 
 /// Inside a body a thematic break must be spelled `***` or `___`
@@ -93,10 +113,26 @@ fn restatements_are_stored_as_separate_trees() {
     for doc in &stream.documents {
         assert_eq!(doc.nodes.len(), 1);
         assert_eq!(doc.nodes[0].as_object().unwrap().head.render(), "User");
-        assert_eq!(doc.nodes[0].nodes.len(), 1, "neither tree gained the other's member");
+        assert_eq!(
+            doc.nodes[0].nodes.len(),
+            1,
+            "neither tree gained the other's member"
+        );
     }
-    assert_eq!(stream.documents[0].nodes[0].nodes[0].as_member().unwrap().name, "id");
-    assert_eq!(stream.documents[1].nodes[0].nodes[0].as_member().unwrap().name, "email");
+    assert_eq!(
+        stream.documents[0].nodes[0].nodes[0]
+            .as_member()
+            .unwrap()
+            .name,
+        "id"
+    );
+    assert_eq!(
+        stream.documents[1].nodes[0].nodes[0]
+            .as_member()
+            .unwrap()
+            .name,
+        "email"
+    );
 
     // And the split survives emission.
     assert_eq!(parse(&emit(&stream)), stream);
@@ -119,9 +155,19 @@ fn emitting_a_multi_document_stream() {
     assert_eq!(
         emit(&stream),
         concat!(
-            "---\n", "rev: 1\n", "---\n", "\n", "- [abc] id\n", "\n",
-            "---\n", "\n",
-            "---\n", "rev: 2\n", "---\n", "\n", "- [abc] email\n",
+            "---\n",
+            "rev: 1\n",
+            "---\n",
+            "\n",
+            "- [abc] id\n",
+            "\n",
+            "---\n",
+            "\n",
+            "---\n",
+            "rev: 2\n",
+            "---\n",
+            "\n",
+            "- [abc] email\n",
         )
     );
     assert_eq!(parse(&emit(&stream)), stream);
@@ -142,10 +188,15 @@ fn the_prepass_hands_the_substrate_only_bodies() {
 /// Paragraph text is a VALUE and survives even when it looks like Markdown.
 #[test]
 fn paragraph_values_survive_looking_like_markdown() {
-    let doc = Document::with_nodes(vec![Node::paragraph("- not a list\n--- not a split\n# not a heading")]);
+    let doc = Document::with_nodes(vec![Node::paragraph(
+        "- not a list\n--- not a split\n# not a heading",
+    )]);
     let stream = Stream::with(vec![doc]);
     let out = emit(&stream);
-    assert!(out.contains("\\- not a list"), "escaped on the way out:\n{out}");
+    assert!(
+        out.contains("\\- not a list"),
+        "escaped on the way out:\n{out}"
+    );
     assert_eq!(parse(&out), stream, "and unescaped on the way back");
 }
 
@@ -188,10 +239,21 @@ fn a_realistic_document() {
     assert_eq!(emit(&parse(&emit(&graph))), emit(&graph));
 
     let screen = &graph.documents[0].nodes[0];
-    assert_eq!(screen.nodes.len(), 3, "prose, the list, and the nested record heading");
+    assert_eq!(
+        screen.nodes.len(),
+        3,
+        "prose, the list, and the nested record heading"
+    );
     let list = &screen.nodes[1];
-    assert_eq!(list.nodes.len(), 4, "two inline members and two children, one sequence");
+    assert_eq!(
+        list.nodes.len(),
+        4,
+        "two inline members and two children, one sequence"
+    );
     let text = &list.nodes[2];
-    assert_eq!(text.as_object().unwrap().sink.as_deref(), Some("thread.open"));
+    assert_eq!(
+        text.as_object().unwrap().sink.as_deref(),
+        Some("thread.open")
+    );
     let _ = Text::empty();
 }

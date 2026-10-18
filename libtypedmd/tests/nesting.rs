@@ -13,7 +13,8 @@ use libtypedmd::{parse, Node, NodeKind, Sigil};
 #[test]
 fn annotation_changes_kind_not_depth() {
     let typed = parse("- [Card] Profile\n  - [abc] title\n  - [Badge] Status\n  - visible: true\n");
-    let tagged = parse("- [Card] Profile\n  - [Badge] title\n  - [Badge] Status\n  - visible: true\n");
+    let tagged =
+        parse("- [Card] Profile\n  - [Badge] title\n  - [Badge] Status\n  - visible: true\n");
 
     let a = &typed.documents[0].nodes[0];
     let b = &tagged.documents[0].nodes[0];
@@ -26,7 +27,10 @@ fn annotation_changes_kind_not_depth() {
     // Only the kind of the first child differs.
     assert_eq!(a.nodes[0].as_member().unwrap().sigil, Some(Sigil::String));
     assert_eq!(a.nodes[0].as_member().unwrap().name, "title");
-    assert_eq!(b.nodes[0].as_object().unwrap().tag.as_deref(), Some("Badge"));
+    assert_eq!(
+        b.nodes[0].as_object().unwrap().tag.as_deref(),
+        Some("Badge")
+    );
     assert_eq!(b.nodes[0].as_object().unwrap().head.render(), "title");
 }
 
@@ -34,7 +38,8 @@ fn annotation_changes_kind_not_depth() {
 /// because they are different fields of the same struct.
 #[test]
 fn rewriting_kind_leaves_children_alone() {
-    let mut stream = parse("- [Card] Profile\n  - [abc] title\n    - [abc] weight\n  - visible: true\n");
+    let mut stream =
+        parse("- [Card] Profile\n  - [abc] title\n    - [abc] weight\n  - visible: true\n");
     let card = &mut stream.documents[0].nodes[0];
     let before = shape(card);
 
@@ -50,7 +55,11 @@ fn rewriting_kind_leaves_children_alone() {
     });
 
     assert!(card.nodes[0].as_object().is_some());
-    assert_eq!(card.nodes[0].nodes.len(), 1, "the child survived the kind change");
+    assert_eq!(
+        card.nodes[0].nodes.len(),
+        1,
+        "the child survived the kind change"
+    );
     assert_eq!(shape(card), before, "the shape is unchanged");
 }
 
@@ -64,7 +73,10 @@ fn one_ordered_sequence_of_mixed_kinds() {
     let card = &stream.documents[0].nodes[0];
     let kinds: Vec<&str> = card.nodes.iter().map(kind_name).collect();
     assert_eq!(kinds, ["Member", "Leaf", "Object", "Member"]);
-    assert!(card.nodes.iter().all(|n| n.nodes.is_empty()), "all four are at one depth");
+    assert!(
+        card.nodes.iter().all(|n| n.nodes.is_empty()),
+        "all four are at one depth"
+    );
 }
 
 /// Each level of list nesting is one level deeper, and nothing else moves a
@@ -88,7 +100,11 @@ fn skipped_heading_levels_create_no_phantom_nodes() {
     let stream = parse("# A\n\n### C\n\n- x: 1\n");
     let nodes = &stream.documents[0].nodes;
     assert_eq!(nodes.len(), 1, "one root heading");
-    assert_eq!(nodes[0].nodes.len(), 1, "`### C` is its only child, not a level-2 phantom");
+    assert_eq!(
+        nodes[0].nodes.len(),
+        1,
+        "`### C` is its only child, not a level-2 phantom"
+    );
     let c = &nodes[0].nodes[0];
     assert_eq!(c.as_object().unwrap().head.render(), "C");
     assert_eq!(c.nodes[0].as_member().unwrap().name, "x");
@@ -108,7 +124,11 @@ fn heading_closes_lists_and_equal_level_headings() {
     assert_eq!(a.nodes[0].nodes[0].as_member().unwrap().name, "deep");
     let b = &a.nodes[1];
     assert_eq!(b.as_object().unwrap().head.render(), "B");
-    assert_eq!(b.nodes.len(), 1, "`y` attached to B, not to the still-open list under A");
+    assert_eq!(
+        b.nodes.len(),
+        1,
+        "`y` attached to B, not to the still-open list under A"
+    );
 
     assert_eq!(roots[1].as_object().unwrap().head.render(), "C");
 }

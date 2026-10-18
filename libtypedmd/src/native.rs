@@ -93,7 +93,10 @@ fn parse_blocks(lines: &[Line]) -> Vec<Block> {
             continue;
         }
         if let Some((level, from)) = heading_at(&line.text) {
-            out.push(Block::Heading { level, source: heading_span(line, from) });
+            out.push(Block::Heading {
+                level,
+                source: heading_span(line, from),
+            });
             i += 1;
             continue;
         }
@@ -186,7 +189,11 @@ fn read_fence(lines: &[Line], i: &mut usize) -> Option<Block> {
         j += 1;
     }
     *i = j;
-    Some(Block::CodeFence { info, body: join_body(&body_lines), line: start_line })
+    Some(Block::CodeFence {
+        info,
+        body: join_body(&body_lines),
+        line: start_line,
+    })
 }
 
 fn join_body(lines: &[String]) -> String {
@@ -255,7 +262,10 @@ fn read_list(lines: &[Line], i: &mut usize) -> Block {
             }
         }
 
-        items.push(ListItem { source, blocks: parse_blocks(&item_lines) });
+        items.push(ListItem {
+            source,
+            blocks: parse_blocks(&item_lines),
+        });
         *i = j;
 
         let continues = *i < lines.len()

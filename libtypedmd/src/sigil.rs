@@ -145,7 +145,11 @@ impl AliasTable {
     /// Resolve a token that may only be a sigil — the slot position, where a
     /// tag is not permitted (spec §3.2).
     pub fn resolve_sigil(&self, token: &str) -> Option<Sigil> {
-        Sigil::from_token(token)
-            .or_else(|| self.sigils.iter().find(|(k, _)| k == token).map(|(_, s)| *s))
+        Sigil::from_token(token).or_else(|| {
+            self.sigils
+                .iter()
+                .find(|(k, _)| k == token)
+                .map(|(_, s)| *s)
+        })
     }
 }

@@ -24,7 +24,11 @@ pub struct ScannedRow {
 
 impl ScannedRow {
     fn new(kind: NodeKind) -> Self {
-        Self { kind, inline: Vec::new(), issues: Vec::new() }
+        Self {
+            kind,
+            inline: Vec::new(),
+            issues: Vec::new(),
+        }
     }
 }
 
@@ -41,9 +45,24 @@ struct Stops {
     quoted_prefix: bool,
 }
 
-const HEAD_MEMBER: Stops = Stops { props: true, arrow: true, colon: true, quoted_prefix: true };
-const HEAD_OBJECT: Stops = Stops { props: true, arrow: true, colon: false, quoted_prefix: true };
-const RHS: Stops = Stops { props: false, arrow: true, colon: false, quoted_prefix: false };
+const HEAD_MEMBER: Stops = Stops {
+    props: true,
+    arrow: true,
+    colon: true,
+    quoted_prefix: true,
+};
+const HEAD_OBJECT: Stops = Stops {
+    props: true,
+    arrow: true,
+    colon: false,
+    quoted_prefix: true,
+};
+const RHS: Stops = Stops {
+    props: false,
+    arrow: true,
+    colon: false,
+    quoted_prefix: false,
+};
 
 /// Scan one row's source into a node kind.
 ///
@@ -55,14 +74,22 @@ pub fn scan_row(src: &str, is_heading: bool, aliases: &AliasTable, loc: Location
         return if is_heading {
             ScannedRow::new(NodeKind::Object(Object::default()))
         } else {
-            ScannedRow::new(NodeKind::Leaf(Leaf { text: String::new(), form: LeafForm::Row }))
+            ScannedRow::new(NodeKind::Leaf(Leaf {
+                text: String::new(),
+                form: LeafForm::Row,
+            }))
         };
     }
 
     match scan_annotation(src, aliases) {
         Annot::Malformed(token) => ScannedRow::new(NodeKind::Fallback(Fallback {
             text: src.to_string(),
-            claim: Claim { shape: ClaimShape::Sigil, token, attrs: Vec::new(), location: loc },
+            claim: Claim {
+                shape: ClaimShape::Sigil,
+                token,
+                attrs: Vec::new(),
+                location: loc,
+            },
         })),
         Annot::Resolved(Annotation::Sigil(sigil), rest) => {
             member_row(src, rest, Some(sigil), aliases, loc)
@@ -220,7 +247,12 @@ fn object_row(
                 attrs.extend(scan_attr_claim(src, p, aliases));
                 return ScannedRow::new(NodeKind::Fallback(Fallback {
                     text: src.to_string(),
-                    claim: Claim { shape: ClaimShape::Attrs, token: tag, attrs, location: loc },
+                    claim: Claim {
+                        shape: ClaimShape::Attrs,
+                        token: tag,
+                        attrs,
+                        location: loc,
+                    },
                 }));
             }
         }
@@ -235,7 +267,9 @@ fn object_row(
     row.inline = props
         .into_iter()
         .map(|(name, value)| {
-            Node::member(name).with_rhs(value).with_placement(Placement::Inline)
+            Node::member(name)
+                .with_rhs(value)
+                .with_placement(Placement::Inline)
         })
         .collect();
     row.issues = issues;
@@ -261,7 +295,10 @@ fn scan_attr_claim(src: &str, from: usize, aliases: &AliasTable) -> Vec<(String,
                     p = step;
                     continue;
                 };
-                out.push((src[p..name_end].to_string(), src[name_end + 1..].trim().to_string()));
+                out.push((
+                    src[p..name_end].to_string(),
+                    src[name_end + 1..].trim().to_string(),
+                ));
                 break;
             }
         }
@@ -328,7 +365,10 @@ fn at_arrow(src: &str, p: usize) -> bool {
 fn at_colon(src: &str, p: usize) -> bool {
     let bytes = src.as_bytes();
     bytes.get(p) == Some(&b':')
-        && bytes.get(p + 1).map(|b| b.is_ascii_whitespace()).unwrap_or(true)
+        && bytes
+            .get(p + 1)
+            .map(|b| b.is_ascii_whitespace())
+            .unwrap_or(true)
 }
 
 /// The start of inline properties: an unquoted bare identifier immediately
@@ -388,7 +428,10 @@ fn scan_text(
                     // Lenient: literal text. Strict: an error (spec §3.2).
                     issues.push(ParseError::new(
                         "unclosed slot: `{{` with no closing `}}` on the row",
-                        Location { column: loc.column + p, ..loc },
+                        Location {
+                            column: loc.column + p,
+                            ..loc
+                        },
                     ));
                 }
             }
@@ -465,7 +508,13 @@ fn read_slot(src: &str, p: usize, aliases: &AliasTable) -> Option<(Slot, usize)>
             }
         }
     }
-    Some((Slot { sigil, expr: expr.to_string() }, close + 2))
+    Some((
+        Slot {
+            sigil,
+            expr: expr.to_string(),
+        },
+        close + 2,
+    ))
 }
 
 // -- shared with the emitter -------------------------------------------------

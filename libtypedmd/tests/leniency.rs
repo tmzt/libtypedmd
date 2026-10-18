@@ -21,7 +21,9 @@ fn unresolvable_annotation_falls_back_with_a_sigil_claim() {
         ("- [abc]nospace\n", "abc"),
     ] {
         let node = parse(input).documents.remove(0).nodes.remove(0);
-        let fallback = node.as_fallback().unwrap_or_else(|| panic!("{input:?} should fall back"));
+        let fallback = node
+            .as_fallback()
+            .unwrap_or_else(|| panic!("{input:?} should fall back"));
         assert_eq!(fallback.claim.shape, ClaimShape::Sigil);
         assert_eq!(fallback.claim.token.as_deref(), Some(token));
         assert_eq!(fallback.text, input.trim_start_matches("- ").trim_end());
@@ -32,13 +34,20 @@ fn unresolvable_annotation_falls_back_with_a_sigil_claim() {
 /// `shape = Attrs`, recording the pairs it did scan, in order.
 #[test]
 fn unparseable_attributes_fall_back_with_an_attrs_claim() {
-    let node = parse("- [List] mode=wide source=\n").documents.remove(0).nodes.remove(0);
+    let node = parse("- [List] mode=wide source=\n")
+        .documents
+        .remove(0)
+        .nodes
+        .remove(0);
     let fallback = node.as_fallback().expect("should fall back");
     assert_eq!(fallback.claim.shape, ClaimShape::Attrs);
     assert_eq!(fallback.claim.token.as_deref(), Some("List"));
     assert_eq!(
         fallback.claim.attrs,
-        vec![("mode".to_string(), "wide".to_string()), ("source".to_string(), String::new())]
+        vec![
+            ("mode".to_string(), "wide".to_string()),
+            ("source".to_string(), String::new())
+        ]
     );
 }
 
@@ -46,13 +55,20 @@ fn unparseable_attributes_fall_back_with_an_attrs_claim() {
 /// never a fallback, so it can never be a strict-mode error.
 #[test]
 fn prose_claims_nothing() {
-    for input in ["- just a plain row\n", "Just a paragraph.\n", "- a row -> with an arrow\n"] {
+    for input in [
+        "- just a plain row\n",
+        "Just a paragraph.\n",
+        "- a row -> with an arrow\n",
+    ] {
         let kind = first_kind(input);
         assert!(
             matches!(kind, libtypedmd::NodeKind::Leaf(_)),
             "{input:?} must be a Leaf, got {kind:?}"
         );
-        assert!(parse_with(input, &ParseOptions::strict()).is_ok(), "{input:?} is strict-clean");
+        assert!(
+            parse_with(input, &ParseOptions::strict()).is_ok(),
+            "{input:?} is strict-clean"
+        );
     }
 }
 
@@ -65,7 +81,9 @@ fn strict_rejects_exactly_the_rows_that_claimed_something() {
     assert_eq!(err.location.document, 0);
     assert_eq!(err.location.line, 4, "the offending row's line");
     assert_eq!(err.location.column, 3, "1-based byte column, past `- `");
-    let claim = err.claim.expect("the error carries the offending claim record");
+    let claim = err
+        .claim
+        .expect("the error carries the offending claim record");
     assert_eq!(claim.shape, ClaimShape::Sigil);
     assert_eq!(claim.token.as_deref(), Some("abc def"));
 
@@ -85,7 +103,8 @@ fn strict_reports_the_first_error() {
 /// A well-formed document parses IDENTICALLY under both modes (spec §7).
 #[test]
 fn well_formed_documents_parse_the_same_in_both_modes() {
-    let good = "# [Record] User\n\n- [abc] id\n- [-] team -> teams.id\n- active: Boolean\n\nProse.\n";
+    let good =
+        "# [Record] User\n\n- [abc] id\n- [-] team -> teams.id\n- active: Boolean\n\nProse.\n";
     let lenient = parse(good);
     let strict = parse_with(good, &ParseOptions::strict()).expect("strict must accept");
     assert_eq!(lenient, strict);
@@ -95,7 +114,11 @@ fn well_formed_documents_parse_the_same_in_both_modes() {
 /// mode (spec §3.2).
 #[test]
 fn unclosed_slot() {
-    let node = parse("- [Text] {{ oops\n").documents.remove(0).nodes.remove(0);
+    let node = parse("- [Text] {{ oops\n")
+        .documents
+        .remove(0)
+        .nodes
+        .remove(0);
     assert_eq!(node.as_object().unwrap().head.render(), "{{ oops");
     let err = parse_with("- [Text] {{ oops\n", &ParseOptions::strict()).expect_err("strict");
     assert!(err.message.contains("unclosed slot"), "{}", err.message);
@@ -107,7 +130,11 @@ fn unclosed_slot() {
 fn strict_rejects_duplicates_at_the_second_occurrence() {
     let err = parse_with("- [Card] X\n  - a: 1\n  - a: 2\n", &ParseOptions::strict())
         .expect_err("strict must reject the duplicate");
-    assert!(err.message.contains("duplicate member name `a`"), "{}", err.message);
+    assert!(
+        err.message.contains("duplicate member name `a`"),
+        "{}",
+        err.message
+    );
     assert_eq!(err.location.line, 3, "the second occurrence, not the first");
 }
 
@@ -131,7 +158,10 @@ fn lenient_never_fails() {
     // The nested row is still nested: nothing above it changed its depth.
     assert_eq!(stream.documents[0].nodes[3].nodes.len(), 1);
     assert_eq!(
-        stream.documents[0].nodes[3].nodes[0].as_member().unwrap().sigil,
+        stream.documents[0].nodes[3].nodes[0]
+            .as_member()
+            .unwrap()
+            .sigil,
         Some(libtypedmd::Sigil::Date)
     );
 }

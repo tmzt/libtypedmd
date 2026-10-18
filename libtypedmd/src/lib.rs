@@ -75,7 +75,10 @@ impl ParseOptions {
     }
 
     pub fn strict() -> Self {
-        Self { strict: true, ..Self::default() }
+        Self {
+            strict: true,
+            ..Self::default()
+        }
     }
 
     pub fn with_aliases(mut self, aliases: AliasTable) -> Self {
