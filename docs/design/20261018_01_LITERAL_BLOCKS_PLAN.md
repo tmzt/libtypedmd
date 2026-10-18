@@ -1,7 +1,7 @@
 ---
 title: Literal blocks — YAML-style `|` rows whose indented text is taken verbatim, with no row grammar inside
 date: 2026-10-18
-status: In implementation
+status: Implemented
 covers:
   - "`- |` rows: the item's indented lines as one verbatim Leaf"
   - "`- name: |` rows: the same block as a Member's RHS"
@@ -134,3 +134,18 @@ Implementation of this plan has started with step 1 (the SPEC.md
 amendment). The status is now `In implementation` and this document is
 immutable (AGENTS.md, Rule 1.5); it changes only on the owner's explicit
 instruction.
+
+## Amendment — 2026-10-18 15:05 EDT: implemented in 0.2.0
+
+Every step is done and its **Done when:** holds. The status is now
+`Implemented`; this document stays frozen. Released as version 0.2.0 (tag
+`v0.2.0`). Departures as built are in CHANGES.md (commit `01f0868`).
+
+- Step 1, the SPEC.md amendment: `bc7b9f2`.
+- Step 2, parsing: `3002719` (libtypedmd), `4d68ca0` and `0544af1`
+  (libtypedmd_pulldown: both substrates agree; `REPORT.gen.md` shows the
+  corpus entries, which were added to the corpus by `4b35a74`). Preceded by
+  formatting-only commits `ff9952c` and `a23b097`.
+- Step 3, emission: `4b35a74`.
+- Step 4, version 0.2.0: `a61c091`, tagged `v0.2.0`.
+
