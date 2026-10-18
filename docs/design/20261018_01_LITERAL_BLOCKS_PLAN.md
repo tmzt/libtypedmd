@@ -1,7 +1,7 @@
 ---
 title: Literal blocks — YAML-style `|` rows whose indented text is taken verbatim, with no row grammar inside
 date: 2026-10-18
-status: Draft
+status: In implementation
 covers:
   - "`- |` rows: the item's indented lines as one verbatim Leaf"
   - "`- name: |` rows: the same block as a Member's RHS"
@@ -127,3 +127,10 @@ rows' new reading, **Breaking**), tagged `v0.2.0`.
 
 **Done when:** `cargo test` passes in the workspace and `v0.2.0` is
 tagged.
+
+## Amendment — 2026-10-18 15:00 EDT: implementation started
+
+Implementation of this plan has started with step 1 (the SPEC.md
+amendment). The status is now `In implementation` and this document is
+immutable (AGENTS.md, Rule 1.5); it changes only on the owner's explicit
+instruction.

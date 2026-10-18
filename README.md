@@ -18,4 +18,4 @@ specified in [SPEC.md](SPEC.md).
 | Document | Date | Status | Decision |
 |---|---|---|---|
 | [Specification: libtypedmd](SPEC.md) | 2026-09-09 | Implemented | The format: four node kinds, seven sigils, one row grammar for headings and lists, indentation as the only nesting, lenient parsing with claims and an opt-in strict mode, emission from the graph with a round-trip guarantee; implemented in 0.1.0. |
-| [Literal blocks — YAML-style `\|` rows whose indented text is taken verbatim, with no row grammar inside](docs/design/20261018_01_LITERAL_BLOCKS_PLAN.md) | 2026-10-18 | Draft | `- \|` and `- name: \|` take the item's indented lines verbatim, so prose items may hold `: `; a new `LeafForm::Literal`; ships as 0.2.0; a draft for the owner. |
+| [Literal blocks — YAML-style `\|` rows whose indented text is taken verbatim, with no row grammar inside](docs/design/20261018_01_LITERAL_BLOCKS_PLAN.md) | 2026-10-18 | In implementation | `- \|` and `- name: \|` take the item's indented lines verbatim, so prose items may hold `: `; a new `LeafForm::Literal`; ships as 0.2.0; approved by the owner and frozen while it is built. |

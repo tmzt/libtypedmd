@@ -251,3 +251,49 @@ The core records structure; a consumer supplies meaning. A consumer provides, at
 *(none — the two items previously listed here are settled in Part II: the alias
 table covers tags as well as sigils, and a stream stores restatements as
 separate documents rather than merging them.)*
+
+## Amendment — 2026-10-18 15:00 EDT: literal blocks
+
+Plan: `docs/design/20261018_01_LITERAL_BLOCKS_PLAN.md`. This amendment adds
+to §1, §3 and §8; where it disagrees with the text above, it wins.
+
+**§1, Leaf.** A Leaf has a form: `Row` (a plain list row), `Paragraph` (a
+paragraph) or `Literal` (a literal block, §3 rule 6). The form is
+presentation only, as the placement flag is, except that a `Literal` leaf
+always emits as a block (§8 rule 8).
+
+**§3 rule 6, literal blocks.**
+
+1. *Leaf block.* A list row whose whole content after the marker (trimmed)
+   is `|` is a Leaf with form `Literal`. Its text is the item's
+   continuation: every source line after the row up to the end of the list
+   item, as the substrate's item extent gives it, with the least common
+   indent of the non-blank lines removed, trailing blank lines dropped and
+   newlines kept (`\n`). The text is sliced from the document body by
+   location, not rebuilt from the substrate's blocks, so a line starting
+   `- `, `#`, `>` or a code fence inside the block stays text and creates
+   no node.
+2. *Member block.* A row `- name: |` (a member row whose RHS, trimmed, is
+   exactly `|`), with or without a core sigil, has as its RHS one literal
+   part holding the block, taken the same way. Slots are not recognised
+   inside it.
+3. *Nothing nests in a block.* The node has no children from the block's
+   lines; payloads and fences inside it are text.
+4. *Empty block.* `- |` with no indented lines is an empty literal Leaf;
+   `- name: |` with none is a Member with an empty literal RHS.
+5. *Strict mode.* A literal block claims nothing (claim shape `None`); it
+   never fails strict parsing.
+6. *Inline form.* `- | text` (text on the same row) is not a literal block:
+   it is read as before.
+
+**§8, canonical form rule 8.**
+
+8. *Literal blocks.* A Leaf with form `Literal`, or a Row-form Leaf whose
+   text contains a newline, emits as `- |` followed by its lines, each
+   indented two spaces deeper than the row's marker (blank lines emitted
+   empty). A Member whose RHS is one literal part containing a newline
+   emits as `name: |` followed by its lines the same way; a sigil, if any,
+   keeps its place (`- [abc] name: |`). A single-line Leaf keeps rule 4
+   (bare, or one double-quoted string); a single-line Literal leaf emits as
+   a block. Both round-trip guarantees above hold.
+
